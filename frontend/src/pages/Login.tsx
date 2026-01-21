@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent, type JSX } from "react";
-import type { AuthResponse } from "../types/AuthResponse";
 import { useAuth } from "../utils/Auth";
 import { useNavigate } from "react-router";
+import { fetchAuthData } from "../utils/LoginService";
 
 export default function LoginPortal(): JSX.Element {
   const [username, setUsername] = useState<string>("");
@@ -20,7 +20,6 @@ export default function LoginPortal(): JSX.Element {
       setError("Por favor, insira um nome de usuário válido.");
       return;
     }
-
     if (!password) {
       setError("Por favor, insira uma senha válida.");
       return;
@@ -28,32 +27,8 @@ export default function LoginPortal(): JSX.Element {
 
     setLoading(true);
 
-    // Prepare URL-encoded body
-    const bodyParams = new URLSearchParams({
-      grant_type: "password",
-      username: username,
-      password: password,
-    });
-
     try {
-      const response = await fetch("https://sistemas.ufpb.br/auth-server/oauth/token", {
-        method: "POST",
-        headers: {
-          Authorization:
-            "Basic c2lnYWEtZGlzY2VudGUtbW9iaWxlOjZkMDYyODBkMTc5MzY3ZjhmM2I3ZjhmYmJjNmJmOTgx",
-            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-          Accept: "application/json",
-        },
-        body: bodyParams.toString(),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Auth failed with status: ${response.status}. ${text}`);
-      }
-
-      const data: AuthResponse = await response.json();
-      setAuthData(data);
+      setAuthData(await fetchAuthData(username, password));
       navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
