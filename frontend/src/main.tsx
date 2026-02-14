@@ -13,6 +13,7 @@ import Calendar from './pages/Calendar.tsx'
 import ProtectedRoute from './utils/ProtectedRoute.tsx'
 import AuthProvider from './utils/Auth.tsx'
 import TestLoginResult from './pages/TestLoginResult.tsx'
+import Logout from './pages/Logout.tsx'
 
 const router = createBrowserRouter([
   { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
@@ -22,6 +23,7 @@ const router = createBrowserRouter([
   { path: '/calendar', element: (<ProtectedRoute><Calendar /></ProtectedRoute>) },
   { path: '/library', element: (<ProtectedRoute><Library /></ProtectedRoute>) },
   { path: '/settings', element: (<ProtectedRoute><Settings /></ProtectedRoute>) },
+  { path: '/logout', element: (<ProtectedRoute><Logout /></ProtectedRoute>) },
   { path: '/login', element: <LoginPortal /> },
   { path: '*', element: <NotFound /> },
 ])

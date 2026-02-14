@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { BiCalendar, BiCog, BiHome, BiLibrary } from "react-icons/bi";
+import { BiCalendar, BiCog, BiHome, BiLibrary, BiLogOut } from "react-icons/bi";
 import { NavLink } from "react-router";
 
 const navItemBase = "flex items-center gap-3 text-sm px-3 py-2 rounded-lg";
@@ -60,19 +60,33 @@ export default function Sidebar(props: { sidebarOpen: boolean }): JSX.Element {
           Calendário
         </NavLink>
 
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `mt-auto ${navItemBase} ${
-              isActive ? navItemActive : navItemInactive
-            }`
-          }
-        >
-          <span>
-            <BiCog />
-          </span>
-          Configurações
-        </NavLink>
+        <div className="mt-auto">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `${navItemBase} ${
+                isActive ? navItemActive : navItemInactive
+              }`
+            }
+          >
+            <span>
+              <BiCog />
+            </span>
+            Configurações
+          </NavLink>
+
+          <NavLink
+            to="/logout"
+            className={({ isActive }) =>
+              `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
+            }
+          >
+            <span>
+              <BiLogOut />
+            </span>
+            Sair
+          </NavLink>
+        </div>
       </nav>
     </aside>
   );
