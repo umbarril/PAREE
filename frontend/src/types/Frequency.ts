@@ -1,0 +1,1 @@
+// TODO: rodar o mitmproxy novamente para ver essa requisição em uma turma que já tenha cadastrado frequencia https://api.ufpb.br/sigaa/mobile/discente/20210160838/364649/frequencia
