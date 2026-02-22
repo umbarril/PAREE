@@ -1,5 +1,6 @@
+import type { TurmaResponse } from "../types/StudentClassesResponse";
 
-export async function fetchClasses(matricula: string, access_token: string): Promise<string[]> {
+export async function fetchClasses(matricula: string, access_token: string): Promise<TurmaResponse[]> {
     const body = {
         method: "GET",
         headers: {
@@ -15,7 +16,7 @@ export async function fetchClasses(matricula: string, access_token: string): Pro
         throw new Error(`Failed to fetch classes: ${response.statusText}`);
     }
 
-    return await response.json();;
+    return response.json();
 }
 
 export async function fetchClassDetails(matricula: string, idTurma: string, access_token: string): Promise<string> {
