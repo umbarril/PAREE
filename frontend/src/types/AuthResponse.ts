@@ -1,5 +1,3 @@
-import type { Discente } from "./Discente";
-
 export interface AuthResponse {
   access_token: string;
   token_type: string;
@@ -10,5 +8,12 @@ export interface AuthResponse {
   id_usuario: number;
   nome: string;
   jti: string;
-  DISCENTE: Discente[];
+  DISCENTE: AuthDiscenteResponse[];
+}
+
+export interface AuthDiscenteResponse {
+  matricula: number;
+  idCurso: number;
+  nivel: string;
+  nome: string;
 }

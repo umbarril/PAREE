@@ -2,16 +2,15 @@ import { useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router";
 import Base from "../components/Base";
 import { useAuth } from "../utils/Auth";
-import type { Turma } from "../utils/StudentClasses";
+import type { TurmaResponse } from "../types/StudentClassesResponse";
 import { fetchClasses } from "../utils/ClassesService";
 import { generateVibrantColor } from "../utils/ThemeHelper";
 
 // todo: adicionar temas
-
 export default function Home(): JSX.Element {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [classes, setClasses] = useState<Turma[]>([]);
+    const [classes, setClasses] = useState<TurmaResponse[]>([]);
 
     const auth = useAuth();
     const navigate = useNavigate();
@@ -20,25 +19,24 @@ export default function Home(): JSX.Element {
     const access_token: string | undefined = auth?.authData?.access_token;
 
     useEffect(() => {
-        if (!matricula || !access_token) {
-            // nothing to do yet
-            setLoading(false);
-            return;
+        async function run() {
+            if (!matricula || !access_token) {
+                setLoading(false);
+                return;
+            }
+            try {
+                setLoading(true);
+                setClasses(await fetchClasses(matricula.toString(), access_token));
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "An error occurred");
+            } finally {
+                setLoading(false);
+            }
         }
-        try {
-            setLoading(true);
-
-            const data = fetchClasses(matricula.toString(), access_token).then();
-
-            setClasses(data as unknown as Turma[]);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An error occurred");
-        } finally {
-            setLoading(false);
-        }
+        run();
     }, [matricula, access_token]);
 
-    const goToClass = (id: string) => navigate(`/classes/${id}`);
+    const goToClass = (id: string) => navigate(`/class/${id}`);
     return (
         <Base>
             <div className="flex-1 flex flex-col">
@@ -51,19 +49,19 @@ export default function Home(): JSX.Element {
 
                     {/* todo: melhorar aparência e por botão para recarregar */}
                     {error && (
-                    <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
-                        {error}
-                    </div>
+                        <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
+                            {error}
+                        </div>
                     )}
 
                     {loading ? (
-                    <>
-                        <svg className="w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                        </svg>
-                        Carregando...
-                    </>
+                        <>
+                            <svg className="w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                            Carregando...
+                        </>
                     ) : (
                         <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-label="Lista de turmas">
                             {classes.map((c) => (

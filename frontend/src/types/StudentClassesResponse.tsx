@@ -6,7 +6,7 @@ export interface HorarioTurma {
   dataFim: string;
 }
 
-export interface Turma {
+export interface TurmaResponse {
   nome: string;
   local: string;
   codigoTurma: string;
