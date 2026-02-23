@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 )
 
 //go:embed frontend/dist/*
@@ -13,8 +14,26 @@ var embeddedFiles embed.FS
 
 // todo: adicionar a função do tray icon aqui
 func main() {
-	target, _ := url.Parse("https://api.ufpb.br")
-	proxy := httputil.NewSingleHostReverseProxy(target)
+	const port = ":8085"
+
+	director := func(req *http.Request) {
+		target, _ := url.Parse("https://api.ufpb.br")
+
+		if strings.HasPrefix(req.URL.Path, "/auth-server/") {
+			target, _ = url.Parse("https://sistemas.ufpb.br")
+
+		} else if strings.HasPrefix(req.URL.Path, "/shared/") {
+			target, _ = url.Parse("https://sigaa.ufpb.br")
+
+		} else if strings.HasPrefix(req.URL.Path, "/arquivos/") {
+			target, _ = url.Parse("https://sig-arq.ufpb.br")
+		}
+
+		// Redireciona a requisição para o host do target
+		req.Host = target.Host
+		rewriteRequestURL(req, target)
+	}
+	proxy := &httputil.ReverseProxy{Director: director}
 
 	proxy.ModifyResponse = func(r *http.Response) error {
 		r.Header.Del("Access-Control-Allow-Origin")
@@ -23,19 +42,22 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
-		r.Host = target.Host
-		proxy.ServeHTTP(w, r)
-	}
-	mux.HandleFunc("/api/", proxyHandler)
-	mux.HandleFunc("/sigaa/", proxyHandler)
+	// auth
+	mux.HandleFunc("/auth-server/", proxy.ServeHTTP)
+
+	// arquivos
+	mux.HandleFunc("/arquivos/", proxy.ServeHTTP)
+	mux.HandleFunc("/shared/", proxy.ServeHTTP)
+
+	// api
+	mux.HandleFunc("/api/", proxy.ServeHTTP)
+	mux.HandleFunc("/sigaa/", proxy.ServeHTTP) // talvez alterar isso para paree ou algo mais genérico, para não ficar tão amarrado ao sigaa
 
 	distFolder, _ := fs.Sub(embeddedFiles, "frontend/dist")
 	mux.Handle("/", http.FileServer(http.FS(distFolder)))
 
 	wrappedMux := corsMiddleware(mux)
 
-	port := ":8085"
 	println("Server started at http://localhost" + port)
 
 	http.ListenAndServe(port, wrappedMux)
@@ -43,12 +65,11 @@ func main() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 1. Allow any origin (or change "*" to "http://localhost:5173" for stricter security)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 
-		// 2. Handle "Preflight" OPTIONS requests
+		// Handle "Preflight" OPTIONS requests
 		// If the browser asks "Can I send a request?", we say "Yes" immediately.
 		// We do NOT pass this to the proxy/mux.
 		if r.Method == "OPTIONS" {
@@ -56,7 +77,53 @@ func corsMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// 3. If it's not an OPTIONS request, pass it to the Mux (Proxy or FileServer)
+		// If it's not an OPTIONS request, pass it to the Mux (Proxy or FileServer)
 		next.ServeHTTP(w, r)
 	})
+}
+
+// ==== COPIADO DE httputil.ReverseProxy (temporário) ====
+func rewriteRequestURL(req *http.Request, target *url.URL) {
+	targetQuery := target.RawQuery
+	req.URL.Scheme = target.Scheme
+	req.URL.Host = target.Host
+	req.URL.Path, req.URL.RawPath = joinURLPath(target, req.URL)
+	if targetQuery == "" || req.URL.RawQuery == "" {
+		req.URL.RawQuery = targetQuery + req.URL.RawQuery
+	} else {
+		req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+	}
+}
+
+func joinURLPath(a, b *url.URL) (path, rawpath string) {
+	if a.RawPath == "" && b.RawPath == "" {
+		return singleJoiningSlash(a.Path, b.Path), ""
+	}
+	// Same as singleJoiningSlash, but uses EscapedPath to determine
+	// whether a slash should be added
+	apath := a.EscapedPath()
+	bpath := b.EscapedPath()
+
+	aslash := strings.HasSuffix(apath, "/")
+	bslash := strings.HasPrefix(bpath, "/")
+
+	switch {
+	case aslash && bslash:
+		return a.Path + b.Path[1:], apath + bpath[1:]
+	case !aslash && !bslash:
+		return a.Path + "/" + b.Path, apath + "/" + bpath
+	}
+	return a.Path + b.Path, apath + bpath
+}
+
+func singleJoiningSlash(a, b string) string {
+	aslash := strings.HasSuffix(a, "/")
+	bslash := strings.HasPrefix(b, "/")
+	switch {
+	case aslash && bslash:
+		return a + b[1:]
+	case !aslash && !bslash:
+		return a + "/" + b
+	}
+	return a + b
 }

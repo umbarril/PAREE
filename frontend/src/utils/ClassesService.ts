@@ -1,5 +1,7 @@
 import type { TurmaResponse } from "../types/StudentClassesResponse";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8085";
+
 export async function fetchClasses(matricula: string, access_token: string): Promise<TurmaResponse[]> {
     const body = {
         method: "GET",
@@ -11,7 +13,7 @@ export async function fetchClasses(matricula: string, access_token: string): Pro
         },
     }
 
-    const response = await fetch(`http://localhost:8085/sigaa/mobile/discente/${matricula}/turmas`, body);
+    const response = await fetch(`${API_URL}/sigaa/mobile/discente/${matricula}/turmas`, body);
     if (!response.ok) {
         throw new Error(`Failed to fetch classes: ${response.statusText}`);
     }
@@ -29,7 +31,7 @@ export async function fetchClassDetails(matricula: string, idTurma: string, acce
             "Accept-Encoding": "gzip",
         },
     }
-    const response = await fetch(`http://localhost:8085/sigaa/mobile/discente/${matricula}/turma/${idTurma}`, body);
+    const response = await fetch(`${API_URL}/sigaa/mobile/discente/${matricula}/turma/${idTurma}`, body);
     
     if (!response.ok) {
         throw new Error(`Failed to fetch class details: ${response.statusText}`);

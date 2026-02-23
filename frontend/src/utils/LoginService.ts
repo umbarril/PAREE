@@ -8,7 +8,8 @@ export const fetchAuthData = async (username: string, password: string): Promise
       password: password,
     });
 
-    const response = await fetch("https://sistemas.ufpb.br/auth-server/oauth/token", {
+    const authUrl = import.meta.env.VITE_API_URL || "http://localhost:8085";
+    const response = await fetch(`${authUrl}/auth-server/oauth/token`, {
         method: "POST",
         headers: {
             Authorization:
