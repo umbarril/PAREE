@@ -11,10 +11,11 @@ import Library from './pages/Library.tsx'
 import Settings from './pages/Settings.tsx'
 import Calendar from './pages/Calendar.tsx'
 import ProtectedRoute from './utils/ProtectedRoute.tsx'
-import AuthProvider from './utils/Auth.tsx'
+import AuthProvider from './utils/AuthProvider.tsx'
 import TestLoginResult from './pages/TestLoginResult.tsx'
 import Logout from './pages/Logout.tsx'
 
+// todo: ouvir com  o wireshark como as requisicoes estao sendo feitas
 const router = createBrowserRouter([
   { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
   { path: '/testauth', element: (<ProtectedRoute><TestLoginResult /></ProtectedRoute>) },

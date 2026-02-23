@@ -1,7 +1,7 @@
 import { BiMenu } from "react-icons/bi";
 import { Link } from "react-router";
 import type { JSX } from "react/jsx-dev-runtime";
-import { useAuth } from "../utils/Auth";
+import { useAuth } from "../utils/AuthProvider";
 
 type TopbarProps = {
     sidebarOpen: boolean; setSidebarOpen: (open: boolean) => void

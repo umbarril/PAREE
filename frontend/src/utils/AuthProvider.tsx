@@ -1,11 +1,14 @@
 import { useContext, useEffect, useState, type PropsWithChildren } from "react";
 import type { AuthResponse } from "../types/AuthResponse";
-import { AuthResponseMock } from "./AuthMock";
+import { AuthResponseMock } from "../tests/AuthMock";
 import { AuthContext, type AuthContextValue } from "./AuthContext";
 
 type AuthProviderProps = PropsWithChildren<{
   testMode: boolean;
 }>;
+
+// todo: adicionar refresh token e expiração
+// (copilot) e talvez um método login que faça a requisição e chame setAuthData, para centralizar a lógica de autenticação
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextValue => {
@@ -32,8 +35,10 @@ export default function AuthProvider({ children, testMode }: AuthProviderProps) 
   useEffect(() => {
     try {
       if (authData) {
+        console.log("Saving auth data to localStorage:", authData);
         localStorage.setItem("authData", JSON.stringify(authData));
       } else {
+        console.log("Removing auth data from localStorage");
         localStorage.removeItem("authData");
       }
     } catch {

@@ -1,7 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router";
 import Base from "../components/Base";
-import { useAuth } from "../utils/Auth";
+import { useAuth } from "../utils/AuthProvider";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
 import { fetchClasses } from "../utils/ClassesService";
 import { generateVibrantColor } from "../utils/ThemeHelper";

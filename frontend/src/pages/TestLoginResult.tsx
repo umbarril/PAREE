@@ -1,5 +1,5 @@
 import Base from "../components/Base";
-import { useAuth } from "../utils/Auth";
+import { useAuth } from "../utils/AuthProvider";
 
 export default function TestLoginResult() {
     const { authData } = useAuth();

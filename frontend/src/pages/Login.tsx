@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent, type JSX } from "react";
-import { useAuth } from "../utils/Auth";
+import { useAuth } from "../utils/AuthProvider";
 import { useNavigate } from "react-router";
 import { fetchAuthData } from "../utils/LoginService";
 
