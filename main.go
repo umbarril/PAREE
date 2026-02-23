@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"embed"
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -17,6 +22,10 @@ func main() {
 
 	// O diretor é a função que o ReverseProxy chama para modificar a requisição antes de enviá-la ao servidor de destino.
 	director := func(req *http.Request) {
+		if cookie, err := req.Cookie("session_token"); err == nil {
+			req.Header.Set("Authorization", "Bearer "+cookie.Value)
+		}
+
 		target, _ := url.Parse("https://api.ufpb.br")
 
 		if strings.HasPrefix(req.URL.Path, "/auth-server/") {
@@ -33,14 +42,57 @@ func main() {
 		req.Host = target.Host
 		rewriteRequestURL(req, target)
 	}
-	modifyResponse := func(r *http.Response) error {
-		r.Header.Del("Access-Control-Allow-Origin")
+	modifyResponse := func(resp *http.Response) error {
+		// Se a resposta for do endpoint de autenticação, extraímos o token e o colocamos em um cookie.
+		// Isso está sendo feito pois o backend do sigaa não pede o cookie httpOnly.
+		// E isso é importante para segurança, para evitar que scripts maliciosos possam acessar o token de autenticação.
+		if strings.HasPrefix(resp.Request.URL.Path, "/auth-server/") {
+			if resp.StatusCode == http.StatusOK {
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return err
+				}
+
+				var data map[string]any
+				if err := json.Unmarshal(body, &data); err == nil {
+					if token, ok := data["access_token"].(string); ok {
+						cookie := &http.Cookie{
+							Name:     "session_token",
+							Value:    token,
+							Path:     "/",
+							HttpOnly: true,
+							Secure:   true,
+							SameSite: http.SameSiteLaxMode,
+						}
+
+						resp.Header.Add("Set-Cookie", cookie.String())
+
+						delete(data, "access_token")
+						delete(data, "refresh_token")
+
+						newBody, err := json.Marshal(data)
+						if err != nil {
+							return err
+						}
+
+						resp.Body = io.NopCloser(bytes.NewBuffer(newBody))
+						resp.ContentLength = int64(len(newBody))
+						resp.Header.Set("Content-Length", strconv.Itoa(len(newBody)))
+
+						return nil
+					} else {
+						return errors.New("access_token not found in response")
+					}
+				} else {
+					return err
+				}
+			}
+		}
 		return nil
 	}
 	proxy := httputil.ReverseProxy{Director: director, ModifyResponse: modifyResponse}
 
 	//// Aqui nós alteramos a resposta do servidor de destino antes de enviá-la de volta para o cliente.
-	//// Em especial, estamos removendo o header "Access-Control-Allow-Origin" para evitar problemas de CORS no frontend.
 	mux := http.NewServeMux()
 
 	// auth
@@ -59,6 +111,8 @@ func main() {
 	http.ListenAndServe(port, wrappedMux)
 }
 
+// corsMiddleware é um middleware que adiciona os cabeçalhos CORS necessários para permitir que o frontend (que pode estar em outro domínio) faça requisições para este servidor.
+// Ele também lida com as requisições OPTIONS, respondendo imediatamente com 200 OK, sem passar para o proxy/mux.
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -79,6 +133,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 // ==== COPIADO DE httputil.ReverseProxy (temporário) ====
+// todo: arrumar um jeito de evitar copiar esse código
 func rewriteRequestURL(req *http.Request, target *url.URL) {
 	targetQuery := target.RawQuery
 	req.URL.Scheme = target.Scheme
