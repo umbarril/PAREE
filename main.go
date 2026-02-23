@@ -52,10 +52,6 @@ func main() {
 	mux.HandleFunc("/api/", proxy.ServeHTTP)
 	mux.HandleFunc("/sigaa/", proxy.ServeHTTP) // todo: talvez alterar isso para paree ou algo mais genérico, para não ficar tão amarrado ao sigaa
 
-	// serve os arquivos estáticos do frontend
-	// distFolder, _ := fs.Sub(embeddedFiles, "frontend/dist")
-	// mux.Handle("/", http.FileServer(http.FS(distFolder)))
-
 	wrappedMux := corsMiddleware(mux)
 
 	println("Server started at http://localhost" + port)
