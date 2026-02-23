@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"io/fs"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -16,6 +15,7 @@ var embeddedFiles embed.FS
 func main() {
 	const port = ":8085"
 
+	// O diretor é a função que o ReverseProxy chama para modificar a requisição antes de enviá-la ao servidor de destino.
 	director := func(req *http.Request) {
 		target, _ := url.Parse("https://api.ufpb.br")
 
@@ -33,28 +33,28 @@ func main() {
 		req.Host = target.Host
 		rewriteRequestURL(req, target)
 	}
-	proxy := &httputil.ReverseProxy{Director: director}
-
-	proxy.ModifyResponse = func(r *http.Response) error {
+	modifyResponse := func(r *http.Response) error {
 		r.Header.Del("Access-Control-Allow-Origin")
 		return nil
 	}
+	proxy := httputil.ReverseProxy{Director: director, ModifyResponse: modifyResponse}
 
+	//// Aqui nós alteramos a resposta do servidor de destino antes de enviá-la de volta para o cliente.
+	//// Em especial, estamos removendo o header "Access-Control-Allow-Origin" para evitar problemas de CORS no frontend.
 	mux := http.NewServeMux()
 
 	// auth
 	mux.HandleFunc("/auth-server/", proxy.ServeHTTP)
-
 	// arquivos
 	mux.HandleFunc("/arquivos/", proxy.ServeHTTP)
 	mux.HandleFunc("/shared/", proxy.ServeHTTP)
-
 	// api
 	mux.HandleFunc("/api/", proxy.ServeHTTP)
-	mux.HandleFunc("/sigaa/", proxy.ServeHTTP) // talvez alterar isso para paree ou algo mais genérico, para não ficar tão amarrado ao sigaa
+	mux.HandleFunc("/sigaa/", proxy.ServeHTTP) // todo: talvez alterar isso para paree ou algo mais genérico, para não ficar tão amarrado ao sigaa
 
-	distFolder, _ := fs.Sub(embeddedFiles, "frontend/dist")
-	mux.Handle("/", http.FileServer(http.FS(distFolder)))
+	// serve os arquivos estáticos do frontend
+	// distFolder, _ := fs.Sub(embeddedFiles, "frontend/dist")
+	// mux.Handle("/", http.FileServer(http.FS(distFolder)))
 
 	wrappedMux := corsMiddleware(mux)
 
