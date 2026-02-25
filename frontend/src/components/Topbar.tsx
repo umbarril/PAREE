@@ -37,7 +37,7 @@ export default function Topbar(props: TopbarProps): JSX.Element {
                 </div>
 
                 {/* TODO trocar para /profile depois */}
-                <Link to="/testauth" title={`Ir para o perfil de ${userName}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer" style={{ minWidth: 40, minHeight: 40 }}>
+                <Link to="/profile" title={`Ir para o perfil de ${userName}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer" style={{ minWidth: 40, minHeight: 40 }}>
                     {avatarUrl ? (
                         <img src={avatarUrl} alt={`${userName} avatar`} className="w-full h-full object-cover" />
                     ) : (

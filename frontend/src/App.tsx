@@ -6,7 +6,7 @@ import NotFound from './pages/NotFound.tsx'
 import Library from './pages/Library.tsx'
 import Settings from './pages/Settings.tsx'
 import Calendar from './pages/Calendar.tsx'
-import TestLoginResult from './pages/TestLoginResult.tsx'
+import Profile from './pages/Profile.tsx'
 import Logout from './pages/Logout.tsx'
 import { useAuthStore } from './store/AuthStore.ts'
 import { createBrowserRouter, RouterProvider } from 'react-router'
@@ -17,7 +17,7 @@ import { ProtectedRoute } from './pages/ProtectedRoute.tsx'
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPortal /> },
   { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
-  { path: '/testauth', element: (<ProtectedRoute><TestLoginResult /></ProtectedRoute>) },
+  { path: '/profile', element: (<ProtectedRoute><Profile /></ProtectedRoute>) },
   { path: '/class/:id', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
   { path: '/class/:id/courseplan', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
   { path: '/class/:id/people', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
