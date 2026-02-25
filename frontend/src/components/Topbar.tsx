@@ -26,11 +26,7 @@ export default function Topbar(props: TopbarProps): JSX.Element {
                 </button>
 
                 <Link to="/" className="flex items-center gap-2 font-bold text-sm">
-                    
-                    {/* <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <rect width="24" height="24" rx="6" fill="#03DAC6" />
-                        <path d="M7 12h10" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg> */}
+                    <img src="/logo.png" alt="PAREE logo" className="w-8 h-8 sm:w-10 sm:h-10 md:w-10 md:h-10 object-contain" loading="lazy" />
                     <span>Portal PAREE</span>
                 </Link>
             </div>
