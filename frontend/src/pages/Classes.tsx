@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import Base from "../components/Base";
-import { useParams } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import { fetchClassCoursePlan, fetchClassMissesAndGrades, fetchClassNews, fetchClassProfessors, fetchClassStudents } from "../services/ClassesService";
 import type { NewsPieceResponse } from "../types/NewsResponse";
 import { useAuthStore } from "../store/AuthStore";
@@ -21,6 +21,21 @@ export default function Classes(): JSX.Element {
   const [menu, setMenu] = useState<number>(0);
 
   const menuList = ["Principal", "Plano de Curso", "Participantes", "Outros"];
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const pathToMenu = (path: string) => {
+    if (path.endsWith('/courseplan')) return 1;
+    if (path.endsWith('/people')) return 2;
+    if (path.endsWith('/other')) return 3;
+    return 0;
+  }
+
+  useEffect(() => {
+    // sync tab with URL when location changes
+    setMenu(pathToMenu(location.pathname));
+  }, [location.pathname]);
 
   if (user === null) {
     console.error("User is null");
@@ -48,7 +63,18 @@ export default function Classes(): JSX.Element {
         <div className="flex-1 flex flex-col">
           <main className="p-6 overflow-auto">
             <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={menu} onChange={(_, v) => setMenu(v as number)} textColor="primary" indicatorColor="primary">
+              <Tabs
+                value={menu}
+                onChange={(_, v) => {
+                  const idx = v as number;
+                  setMenu(idx);
+                  const base = `/class/${id}`;
+                  const path = idx === 0 ? base : idx === 1 ? `${base}/courseplan` : idx === 2 ? `${base}/people` : `${base}/other`;
+                  navigate(path);
+                }}
+                textColor="primary"
+                indicatorColor="primary"
+              >
                 {menuList.map((item, index) => (
                   <Tab label={item} key={index} />
                 ))}
