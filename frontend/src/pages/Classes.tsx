@@ -9,7 +9,8 @@ import type { CoursePlanResponse } from "../types/CoursePlanResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Stack } from "@mui/material";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Stack, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Link as MuiLink } from "@mui/material";
+import { BiExpandVertical } from "react-icons/bi";
 
 export default function Classes(): JSX.Element {
   const { id } = useParams();
@@ -54,10 +55,10 @@ export default function Classes(): JSX.Element {
               </Tabs>
             </Box>
 
-            {menu === 0 && <MainClassesMenu id={id!} error={error} setLoading={setLoading} />}
-            {menu === 1 && <CoursePlanMenu id={id!} error={error} setLoading={setLoading} />}
-            {menu === 2 && <ParticipantsMenu id={id!} error={error} setLoading={setLoading} />}
-            {menu === 3 && <OthersMenu matricula={user?.matricula ? user.matricula : ""} id={id!} error={error} setLoading={setLoading} />}
+            {menu === 0 && <MainClassesMenu id={id!} setLoading={setLoading} />}
+            {menu === 1 && <CoursePlanMenu id={id!} setLoading={setLoading} />}
+            {menu === 2 && <ParticipantsMenu id={id!} setLoading={setLoading} />}
+            {menu === 3 && <OthersMenu matricula={user?.matricula ? user.matricula : ""} id={id!} setLoading={setLoading} />}
           </main>
         </div>
       )}{" "}
@@ -66,19 +67,14 @@ export default function Classes(): JSX.Element {
   );
 }
 
-function MainClassesMenu({ id, error, setLoading }: { id: string; error: string | null; setLoading: (loading: boolean) => void }): JSX.Element {
+function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
     const [news, setNews] = useState<NewsPieceResponse[]>([]);
     const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
 
-    useEffect(() => { // todo: melhorar isso, ta meio gambiarra, tem que mostrar loading enquanto carrega, e nao pode ficar setando loading true toda hora
-        // sem falar que isso não cacheia
+    useEffect(() => { 
         setLoading(true)
         console.log("Fetching class news for class id:", id);
         async function run() {
-            if (error) {
-                setLoading(false);
-                return;
-            }
             fetchClassNews(id!).then((details) => {
                 console.log(details);
                 setNews(details);
@@ -90,7 +86,8 @@ function MainClassesMenu({ id, error, setLoading }: { id: string; error: string 
             setLoading(false);
         }
         run();
-    }, [id, error]);
+    }, [id]);
+
     return (
         <>
         <Box sx={{ display: 'flex', itemsAlign: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -132,51 +129,92 @@ function MainClassesMenu({ id, error, setLoading }: { id: string; error: string 
     )
 }
 
-function CoursePlanMenu({ id, error, setLoading }: { id: string; error: string | null; setLoading: (loading: boolean) => void }): JSX.Element {
+function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
     const [coursePlan, setCoursePlan] = useState<CoursePlanResponse>();
 
-    useEffect(() => { // todo: melhorar isso, ta meio gambiarra, tem que mostrar loading enquanto carrega, e nao pode ficar setando loading true toda hora
-        // sem falar que isso não cacheia
-        setLoading(true)
-        console.log("Fetching class course plan for class id:", id);
+    useEffect(() => {
+        setLoading(true);
         async function run() {
-            if (error) {
-                setLoading(false);
-                return;
-            }
-            fetchClassCoursePlan(id!).then((details) => {
-                console.log(details);
-                setCoursePlan(details);
-            });
             setLoading(false);
+            try {
+                const details = await fetchClassCoursePlan(id!);
+                setCoursePlan(details);
+            } finally { setLoading(false); }
         }
         run();
-    }, [id, error]);
+    }, [id]);
+
+    if (!coursePlan) {
+      return (
+        <div className="mb-4">
+          <Typography variant="h6">Atividades</Typography>
+          <Typography variant="body2" color="text.secondary">Plano de curso não disponível.</Typography>
+        </div>
+      );
+    }
+
+    // build a unified chronological list: topics, avaliacoes, referencias (referencias may not have dates)
+    type Item = { kind: 'tópico'|'avaliação'|'referência'; date?: string|null; title: string; payload: any };
+    const items: Item[] = [];
+
+    (coursePlan.topicosDeAula ?? []).forEach((t) => {
+      items.push({ kind: 'tópico', date: t.dataInicio ?? t.dataCadastro ?? null, title: t.descricao || 'Tópico', payload: t });
+    });
+
+    (coursePlan.avaliacoes ?? []).forEach((a) => {
+      items.push({ kind: 'avaliação', date: a.dataRealizacao ?? null, title: a.descricao || 'Avaliação', payload: a });
+    });
+
+    (coursePlan.referencias ?? []).forEach((r, idx) => {
+      // references may not have a date; place them after dated items
+      items.push({ kind: 'referência', date: null, title: r.titulo ?? `Referência ${idx+1}`, payload: r });
+    });
+
+    items.sort((a,b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    const fmtDate = (d?: string|null) => {
+      if (!d) return 'Sem data';
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString();
+    }
 
     return (
-        <div className="flex items-center justify-between mb-4">
-            <div>
-            <h2 className="m-0 text-xl font-semibold">
-                Atividades
-            </h2>
-            </div>
+      <div>
+        <Typography variant="h6" gutterBottom>Plano de Curso</Typography>
+        <div>
+          {items.length === 0 && <Typography color="text.secondary">Nenhum item no plano.</Typography>}
+          {items.map((it, idx) => (
+            <Accordion key={idx} disableGutters>
+              <AccordionSummary expandIcon={<BiExpandVertical />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="subtitle1">{it.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">{fmtDate(it.date)}</Typography>
+                </Box>
+              </AccordionSummary>
+            </Accordion>
+          ))}
         </div>
+      </div>
     )
 }
 
-function ParticipantsMenu({ id, error, setLoading }: { id: string; error: string | null; setLoading: (loading: boolean) => void }): JSX.Element {
+function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
     const [students, setStudents] = useState<StudentResponse[]>();
     const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
 
-    useEffect(() => { // todo: melhorar isso, ta meio gambiarra, tem que mostrar loading enquanto carrega, e nao pode ficar setando loading true toda hora
-        // sem falar que isso não cacheia
+    useEffect(() => {
         setLoading(true)
         console.log("Fetching class course plan for class id:", id);
         async function run() {
-            if (error) {
-                setLoading(false);
-                return;
-            }
             fetchClassStudents(id!).then((details) => {
                 console.log(details);
                 setStudents(details);
@@ -188,7 +226,7 @@ function ParticipantsMenu({ id, error, setLoading }: { id: string; error: string
             setLoading(false);
         }
         run();
-    }, [id, error]);
+    }, [id]);
     
     return (
         <div className="flex items-center justify-between mb-4">
@@ -202,7 +240,7 @@ function ParticipantsMenu({ id, error, setLoading }: { id: string; error: string
 }
 
 
-function OthersMenu({ matricula, id, error, setLoading }: { matricula: string, id: string; error: string | null; setLoading: (loading: boolean) => void }): JSX.Element {
+function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: string; setLoading: (loading: boolean) => void }): JSX.Element {
     const [gradesAndMisses, setGradesAndMisses] = useState<MissesAndGradesResponse>();
 
     useEffect(() => { // todo: melhorar isso, ta meio gambiarra, tem que mostrar loading enquanto carrega, e nao pode ficar setando loading true toda hora
@@ -210,10 +248,6 @@ function OthersMenu({ matricula, id, error, setLoading }: { matricula: string, i
         setLoading(true)
         console.log("Fetching class course plan for class id:", id);
         async function run() {
-            if (error) {
-                setLoading(false);
-                return;
-            }
             fetchClassMissesAndGrades(matricula, id!).then((details) => {
                 console.log(details);
                 setGradesAndMisses(details);
@@ -221,7 +255,7 @@ function OthersMenu({ matricula, id, error, setLoading }: { matricula: string, i
             setLoading(false);
         }
         run();
-    }, [id, error]);
+    }, [id]);
 
     return (
         <div className="flex items-center justify-between mb-4">
