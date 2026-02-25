@@ -2,7 +2,7 @@
 export interface StudentResponse {
     matricula: number;
     urlFoto: string | null;
-    situacaoMatricula: string;
+    situacaoMatricula: string; // "MATRICULADO", "TRANCADO", etc.
     email: string;
     curso: string;
     nome: string;

@@ -380,18 +380,49 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
                 </ListItem>
               )}
 
-              {students && students.map((s, i) => (
+              {students && (() => {
+                const sorted = [...students].sort((a,b) => {
+                  const aTr = (a.situacaoMatricula || '').toUpperCase() === 'TRANCADO';
+                  const bTr = (b.situacaoMatricula || '').toUpperCase() === 'TRANCADO';
+                  if (aTr === bTr) return (a.nome || '').localeCompare(b.nome || '');
+                  return aTr ? 1 : -1;
+                });
+                return sorted.map((s, i) => {
+                  const email = (s as any).email;
+                  const isTrancado = ((s.situacaoMatricula || '').toUpperCase() === 'TRANCADO');
+                  return (
                 <ListItem key={s.matricula ?? s.nome ?? i} secondaryAction={
-                  <IconButton edge="end" aria-label="email">
+                      email ? (
+                        <IconButton component="a" href={`mailto:${email}`} edge="end" aria-label="email" title={`Enviar e-mail para ${s.nome}`}>
+                          <BiMailSend />
+                        </IconButton>
+                      ) : (
+                        <IconButton edge="end" aria-label="email" disabled>
                     <BiMailSend />
                   </IconButton>
+                      )
                 }>
                   <ListItemAvatar>
-                    <Avatar src={(s as any).urlFoto}>{s.nome ? s.nome[0] : '?'}</Avatar>
+                        <Avatar src={(s as any).urlFoto} sx={{ filter: isTrancado ? 'grayscale(100%)' : 'none', opacity: isTrancado ? 0.6 : 1 }}>{s.nome ? s.nome[0] : '?'}</Avatar>
                   </ListItemAvatar>
-                  <ListItemText primary={s.nome ?? 'Estudante'} secondary={(s as any).email ?? ''} />
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography>{s.nome ?? 'Estudante'}</Typography>
+                            {isTrancado && <Chip label="Trancado" size="small" variant="outlined" />}
+                          </Box>
+                        }
+                        secondary={
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            {s.curso && <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>{s.curso}</Typography>}
+                            {email && <Typography variant="caption" color="text.secondary">{email}</Typography>}
+                          </Box>
+                        }
+                      />
                 </ListItem>
-              ))}
+                  )
+                })
+              })()}
             </List>
           </Card>
         </Box>
