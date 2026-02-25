@@ -1,10 +1,10 @@
 import { useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router";
 import Base from "../components/Base";
-import { useAuth } from "../utils/AuthProvider";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
-import { fetchClasses } from "../utils/ClassesService";
-import { generateVibrantColor } from "../utils/ThemeHelper";
+import { fetchClasses } from "../services/ClassesService";
+import { generateVibrantColor } from "../ThemeHelper";
+import { useAuthStore } from "../store/AuthStore";
 
 // todo: adicionar temas
 export default function Home(): JSX.Element {
@@ -12,29 +12,33 @@ export default function Home(): JSX.Element {
     const [error, setError] = useState<string | null>(null);
     const [classes, setClasses] = useState<TurmaResponse[]>([]);
 
-    const auth = useAuth();
+    const { user } = useAuthStore();
     const navigate = useNavigate();
-
-    const matricula: string | number | undefined = auth?.authData?.DISCENTE?.[0]?.matricula;
-    const access_token: string | undefined = auth?.authData?.access_token;
 
     useEffect(() => {
         async function run() {
-            if (!matricula || !access_token) {
+            if (user === null) {
                 setLoading(false);
+                setError("Usuário não autenticado. Por favor, faça login.");
+                return;
+            }
+            if (user.matricula === null || user.matricula === "") {
+                setLoading(false);
+                console.log("Matricula está vazia, pulando fetch de turmas.");
                 return;
             }
             try {
                 setLoading(true);
-                setClasses(await fetchClasses(matricula.toString(), access_token));
+                const { data: classes } = await fetchClasses(user.matricula);
+                setClasses(classes);
             } catch (err) {
-                setError(err instanceof Error ? err.message : "An error occurred");
+                setError(err instanceof Error ? err.message : "Um erro ocorreu ao carregar suas turmas.");
             } finally {
                 setLoading(false);
             }
         }
         run();
-    }, [matricula, access_token]);
+    }, [user]);
 
     const goToClass = (id: string) => navigate(`/class/${id}`);
     return (

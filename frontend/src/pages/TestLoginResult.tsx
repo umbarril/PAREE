@@ -1,24 +1,16 @@
 import Base from "../components/Base";
-import { useAuth } from "../utils/AuthProvider";
+import { useAuthStore } from "../store/AuthStore";
 
 export default function TestLoginResult() {
-    const { authData } = useAuth();
+    const { user } = useAuthStore();
     return (
         <Base>
             <div>
-                <h2>Bem-vindo, {authData?.nome}</h2>
-                <img src={authData?.foto} alt="Profile" className="w-24 h-24 rounded-full" />
+                <h2>Bem-vindo, {user?.nome}</h2>
+                <img src={user?.foto} alt="Profile" className="w-24 h-24 rounded-full" />
                 
                 <h3>Cursos:</h3>
-                <ul>
-                    {authData?.DISCENTE.map((d) => (
-                    <li key={d.matricula}>
-                        {d.nome} - Matrícula: {d.matricula}
-                    </li>
-                    ))}
-                </ul>
-
-                <p>Token expira em: {authData?.expires_in} segundos</p>
+                {user?.nomeCurso} - Matrícula: {user?.matricula}
             </div>
         </Base>
   );

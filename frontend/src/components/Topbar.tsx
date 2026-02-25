@@ -1,18 +1,16 @@
 import { BiMenu } from "react-icons/bi";
 import { Link } from "react-router";
 import type { JSX } from "react/jsx-dev-runtime";
-import { useAuth } from "../utils/AuthProvider";
+import { useAuthStore } from "../store/AuthStore";
 
 type TopbarProps = {
     sidebarOpen: boolean; setSidebarOpen: (open: boolean) => void
 }
 
 export default function Topbar(props: TopbarProps): JSX.Element {
-    const auth = useAuth();
-    const user = {
-        name: auth?.authData ? auth.authData.nome : "Usuário",
-        avatarUrl: auth?.authData?.foto ? auth.authData.foto : "",
-    }
+    const { user } = useAuthStore();
+    const userName = user ? user.nome : "Usuário";
+    const avatarUrl = user ? user.foto : "";
 
     const { sidebarOpen, setSidebarOpen } = props;
     return(
@@ -39,16 +37,16 @@ export default function Topbar(props: TopbarProps): JSX.Element {
 
             <div className="flex items-center gap-3">
                 <div aria-hidden className="text-slate-500 text-sm">
-                    Bem-vindo, {user.name.split(" ")[0]}
+                    Bem-vindo, {userName.split(" ")[0]}
                 </div>
 
                 {/* TODO trocar para /profile depois */}
-                <Link to="/testauth" title={`Ir para o perfil de ${user.name}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer">
-                    {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={`${user.name} avatar`} className="w-full h-full object-cover" />
+                <Link to="/testauth" title={`Ir para o perfil de ${userName}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer">
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt={`${userName} avatar`} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center bg-purple-100 text-purple-900 font-bold text-sm">
-                            {user.name
+                            {userName
                                 .split(" ")
                                 .map((n) => n[0])
                                 .slice(0, 2)

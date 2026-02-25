@@ -1,15 +1,32 @@
-import { useState, type ChangeEvent, type FormEvent, type JSX } from "react";
-import { useAuth } from "../utils/AuthProvider";
+import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from "react";
+// import { useNavigate } from "react-router";
+import { fetchAuthData } from "../services/LoginService";
+import { authResponseToUser, useAuthStore } from "../store/AuthStore";
 import { useNavigate } from "react-router";
-import { fetchAuthData } from "../utils/LoginService";
 
 export default function LoginPortal(): JSX.Element {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const navigate = useNavigate();
+
+  if (isAuthenticated) {
+    useEffect(() => {
+      navigate("/");
+    }, [navigate]);
+
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Você já está logado</h1>
+          <p className="text-gray-500">Redirecionando para a página inicial...</p>
+        </div>
+      </div>
+    );
+  }
+
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  // authData is stored in global context; use context setter to persist login
-  const { setAuthData } = useAuth();
-  const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -24,11 +41,10 @@ export default function LoginPortal(): JSX.Element {
       setError("Por favor, insira uma senha válida.");
       return;
     }
-
     setLoading(true);
-
     try {
-      setAuthData(await fetchAuthData(username, password));
+      const response = await fetchAuthData(username, password);
+      login(authResponseToUser(response.data));
       navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");

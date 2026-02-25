@@ -1,8 +1,9 @@
 import { useEffect, type JSX } from "react";
-import { useAuth } from "../utils/AuthProvider";
+import { useAuthStore } from "../store/AuthStore";
 
 export default function Logout(): JSX.Element {
-    const logout: () => void = useAuth().logout;
+    const { logout } = useAuthStore();
+
     useEffect(() => {
         logout();
     }, [logout]);
