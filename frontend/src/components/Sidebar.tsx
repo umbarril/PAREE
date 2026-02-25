@@ -55,7 +55,7 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
       </NavLink>
 
       <div className="mt-auto">
-        <NavLink
+        {/* <NavLink
           to="/settings"
           className={({ isActive }) =>
             `${navItemBase} ${
@@ -67,7 +67,7 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
             <BiCog />
           </span>
           Configurações
-        </NavLink>
+        </NavLink> */}
 
         <NavLink
           to="/logout"
