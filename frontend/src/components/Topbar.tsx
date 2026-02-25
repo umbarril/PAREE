@@ -14,7 +14,7 @@ export default function Topbar(props: TopbarProps): JSX.Element {
 
     const { sidebarOpen, setSidebarOpen } = props;
     return(
-        <header className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-white shadow-sm">
+        <header className="h-16 min-h-[64px] flex items-center justify-between px-5 py-2 border-b border-slate-200 bg-white shadow-sm">
             <div className="flex items-center gap-3">
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -32,12 +32,12 @@ export default function Topbar(props: TopbarProps): JSX.Element {
             </div>
 
             <div className="flex items-center gap-3">
-                <div aria-hidden className="text-slate-500 text-sm">
+                <div aria-hidden className="text-slate-500 text-sm hidden sm:block">
                     Bem-vindo, {userName.split(" ")[0]}
                 </div>
 
                 {/* TODO trocar para /profile depois */}
-                <Link to="/testauth" title={`Ir para o perfil de ${userName}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer">
+                <Link to="/testauth" title={`Ir para o perfil de ${userName}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer" style={{ minWidth: 40, minHeight: 40 }}>
                     {avatarUrl ? (
                         <img src={avatarUrl} alt={`${userName} avatar`} className="w-full h-full object-cover" />
                     ) : (
