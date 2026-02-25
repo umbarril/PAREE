@@ -5,7 +5,7 @@ import { fetchClassCoursePlan, fetchClassMissesAndGrades, fetchClassNews, fetchC
 import type { NewsPieceResponse } from "../types/NewsResponse";
 import { useAuthStore } from "../store/AuthStore";
 import DOMPurify from "dompurify";
-import type { CoursePlanResponse } from "../types/CoursePlanResponse";
+import type { Arquivo, CoursePlanResponse, LessonTopic } from "../types/CoursePlanResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
@@ -133,13 +133,12 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
     const [coursePlan, setCoursePlan] = useState<CoursePlanResponse>();
 
     useEffect(() => {
-        setLoading(true);
+        // setLoading(true);
         async function run() {
-            setLoading(false);
-            try {
+            // try {
                 const details = await fetchClassCoursePlan(id!);
                 setCoursePlan(details);
-            } finally { setLoading(false); }
+            // } finally { setLoading(false); }
         }
         run();
     }, [id]);
@@ -147,35 +146,31 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
     if (!coursePlan) {
       return (
         <div className="mb-4">
-          <Typography variant="h6">Atividades</Typography>
+          <Typography variant="h6">Plano de Curso</Typography>
           <Typography variant="body2" color="text.secondary">Plano de curso não disponível.</Typography>
         </div>
       );
     }
 
-    // build a unified chronological list: topics, avaliacoes, referencias (referencias may not have dates)
-    type Item = { kind: 'tópico'|'avaliação'|'referência'; date?: string|null; title: string; payload: any };
+    type Item = { kind: 'topico'|'avaliacao'; date?: string|null; title: string; payload: any };
     const items: Item[] = [];
 
     (coursePlan.topicosDeAula ?? []).forEach((t) => {
-      items.push({ kind: 'tópico', date: t.dataInicio ?? t.dataCadastro ?? null, title: t.descricao || 'Tópico', payload: t });
+      items.push({ kind: 'topico', date: t.dataInicio ?? t.dataCadastro ?? null, title: t.descricao || 'Tópico', payload: t });
     });
 
     (coursePlan.avaliacoes ?? []).forEach((a) => {
-      items.push({ kind: 'avaliação', date: a.dataRealizacao ?? null, title: a.descricao || 'Avaliação', payload: a });
-    });
-
-    (coursePlan.referencias ?? []).forEach((r, idx) => {
-      // references may not have a date; place them after dated items
-      items.push({ kind: 'referência', date: null, title: r.titulo ?? `Referência ${idx+1}`, payload: r });
+      items.push({ kind: 'avaliacao', date: a.dataRealizacao ?? null, title: a.descricao || 'Avaliação', payload: a });
     });
 
     items.sort((a,b) => {
       if (!a.date && !b.date) return 0;
       if (!a.date) return 1;
       if (!b.date) return -1;
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+      return new Date(a.date!).getTime() - new Date(b.date!).getTime();
     });
+
+    const references = coursePlan.referencias ?? [];
 
     const fmtDate = (d?: string|null) => {
       if (!d) return 'Sem data';
@@ -189,19 +184,88 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
         <Typography variant="h6" gutterBottom>Plano de Curso</Typography>
         <div>
           {items.length === 0 && <Typography color="text.secondary">Nenhum item no plano.</Typography>}
-          {items.map((it, idx) => (
-            <Accordion key={idx} disableGutters>
-              <AccordionSummary expandIcon={<BiExpandVertical />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="subtitle1">{it.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+          {items.map((it, idx) => {
+            const hasContent = (it.kind === 'topico' && ((it.payload.conteudo && it.payload.conteudo.trim()) || (it.payload.arquivos && it.payload.arquivos.length) || (it.payload.tarefas && it.payload.tarefas.length))) ||
+              (it.kind === 'avaliacao' && ((it.payload.descricao && it.payload.descricao.trim()) || (it.payload.observacoes && it.payload.observacoes.trim())));
+
+            if (!hasContent) {
+              return (
+                <Card key={idx} sx={{ mb: 1, p: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="subtitle1">{it.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">{fmtDate(it.date)}</Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary">{fmtDate(it.date)}</Typography>
-                </Box>
-              </AccordionSummary>
-            </Accordion>
-          ))}
+                </Card>
+              );
+            }
+
+            return (
+              <Accordion key={idx} disableGutters>
+                <AccordionSummary expandIcon={<BiExpandVertical />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography variant="subtitle1">{it.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">{fmtDate(it.date)}</Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  {it.kind === 'topico' && (
+                    <Box>
+                      {/* sanitize and render HTML content like news */}
+                      {(() => {
+                        const raw = it.payload.conteudo || '';
+                        let clean = DOMPurify.sanitize(raw);
+                        // normalize BRs to spaces to avoid forced narrow line breaks
+                        clean = clean.replace(/<br\s*\/?>/gi, ' ');
+                        return (
+                          <Box sx={{ color: 'text.secondary', overflowWrap: 'anywhere', wordBreak: 'break-word', '& img': { maxWidth: '100%', height: 'auto' } }} dangerouslySetInnerHTML={{ __html: clean }} />
+                        );
+                      })()}
+
+                      {it.payload.arquivos && it.payload.arquivos.length > 0 && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption">Arquivos:</Typography>
+                          <List dense>
+                            {it.payload.arquivos.map((f: Arquivo, i: number) => (
+                              <ListItem key={i} secondaryAction={f.link ? <MuiLink href={f.link} target="_blank" rel="noreferrer">Abrir</MuiLink> : undefined}>
+                                <ListItemText primary={f.nomeArquivo ?? f.descricao ?? `Arquivo ${i+1}`} secondary={f.tipoMaterial ?? ''} />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                  {it.kind === 'avaliacao' && (
+                    <Box>
+                      {/* <Typography variant="body2">{it.payload.descricao}</Typography> */}
+                      <Typography variant="caption" color="text.secondary">Horário: {it.payload.horario ?? '—'}</Typography>
+                      {it.payload.observacoes && <Typography variant="body2" sx={{ mt: 1 }}>{it.payload.observacoes}</Typography>}
+                    </Box>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            )
+          })}
+
+          {references.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6">Referências</Typography>
+              <List>
+                {references.map((r, i) => (
+                  <ListItem key={i}>
+                    <ListItemText primary={r.titulo ?? r.descricao ?? `Referência ${i+1}`} secondary={r.autor ?? ''} />
+                    {r.url && <MuiLink href={r.url} target="_blank" rel="noreferrer">Abrir</MuiLink>}
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
         </div>
       </div>
     )
@@ -212,7 +276,7 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
     const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
 
     useEffect(() => {
-        setLoading(true)
+        // setLoading(true)
         console.log("Fetching class course plan for class id:", id);
         async function run() {
             fetchClassStudents(id!).then((details) => {
@@ -223,7 +287,7 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
                 console.log(details);
                 setProfessors(details);
             });
-            setLoading(false);
+            // setLoading(false);
         }
         run();
     }, [id]);
@@ -245,14 +309,14 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
 
     useEffect(() => { // todo: melhorar isso, ta meio gambiarra, tem que mostrar loading enquanto carrega, e nao pode ficar setando loading true toda hora
         // sem falar que isso não cacheia
-        setLoading(true)
+        // setLoading(true)
         console.log("Fetching class course plan for class id:", id);
         async function run() {
             fetchClassMissesAndGrades(matricula, id!).then((details) => {
                 console.log(details);
                 setGradesAndMisses(details);
             });
-            setLoading(false);
+            // setLoading(false);
         }
         run();
     }, [id]);

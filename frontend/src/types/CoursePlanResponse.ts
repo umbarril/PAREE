@@ -19,10 +19,10 @@ export interface LessonTopic {
     descricao: string;
     dataInicio: string;
     dataFim: string;
-    conteudo: string;
+    conteudo: string; // html
     dataCadastro: string;
-    arquivos: [],
-    tarefas: [],
+    arquivos: Arquivo[] | null; 
+    // tarefas: [], ?????
     cancelada: boolean;
 }
 
@@ -45,4 +45,14 @@ export interface Avaliacao {
     descricao: string;
     ativo: boolean;
     observacoes: string | null;
+}
+
+export interface Arquivo {
+    data: string;
+    descricao: string;
+    idTopicoAula: number;
+    link: string;
+    nomeArquivo: string;   
+    nomePessoa: string;
+    tipoMaterial: string; // "ARQUIVO" ou "TAREFA"(?)
 }
