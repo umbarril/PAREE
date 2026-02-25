@@ -15,16 +15,21 @@ import { ProtectedRoute } from './pages/ProtectedRoute.tsx'
 
 // todo: ouvir com  o wireshark como as requisicoes estao sendo feitas
 const router = createBrowserRouter([
-  { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
-  { path: '/testauth', element: (<ProtectedRoute><TestLoginResult /></ProtectedRoute>) },
-  { path: '/class/:id', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
-  { path: '/about', element: (<ProtectedRoute><About /></ProtectedRoute>) },
-  { path: '/calendar', element: (<ProtectedRoute><Calendar /></ProtectedRoute>) },
-  { path: '/library', element: (<ProtectedRoute><Library /></ProtectedRoute>) },
-  { path: '/settings', element: (<ProtectedRoute><Settings /></ProtectedRoute>) },
-  { path: '/logout', element: (<ProtectedRoute><Logout /></ProtectedRoute>) },
   { path: '/login', element: <LoginPortal /> },
   { path: '*', element: <NotFound /> },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      { path: '/', element: <Home />, },
+      { path: '/testauth', element: <TestLoginResult />, },
+      { path: '/class/:id', element: <Classes />, },
+      { path: '/about', element: <About />, },
+      { path: '/calendar', element: <Calendar />, },
+      { path: '/library', element: <Library />, },
+      { path: '/settings', element: <Settings />, },
+      { path: '/logout', element: <Logout />, },
+    ]
+  },
 ])
 
 export function App() {
