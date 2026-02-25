@@ -12,12 +12,14 @@ import { useAuthStore } from './store/AuthStore.ts'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { useEffect } from 'react'
 import { ProtectedRoute } from './pages/ProtectedRoute.tsx'
+import { Documents } from './pages/Documents.tsx'
 
 // todo: ouvir com  o wireshark como as requisicoes estao sendo feitas
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPortal /> },
   { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
   { path: '/profile', element: (<ProtectedRoute><Profile /></ProtectedRoute>) },
+  { path: '/documents', element: (<ProtectedRoute><Documents /></ProtectedRoute>) },
   { path: '/class/:id', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
   { path: '/class/:id/courseplan', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
   { path: '/class/:id/people', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },

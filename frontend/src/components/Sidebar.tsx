@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { BiCalendar, BiCog, BiDetail, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
+import { BiCalendar, BiClipboard, BiCog, BiDetail, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
 import { NavLink } from "react-router";
 
 const navItemBase = "flex items-center gap-3 text-sm px-3 py-2 rounded-lg";
@@ -52,6 +52,18 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
           <BiCalendar />
         </span>
         Calendário
+      </NavLink>
+
+      <NavLink
+        to="/documents"
+        className={({ isActive }) =>
+          `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
+        }
+      >
+        <span>
+          <BiClipboard />
+        </span>
+        Documentos
       </NavLink>
 
       <div className="mt-auto">
