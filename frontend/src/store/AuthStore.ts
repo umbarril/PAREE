@@ -33,8 +33,8 @@ export const useAuthStore = create<AuthState>()(
 
       checkAuth: async () => {
         try {
-          const { data } = await fetchMe();
-          const user: User = authResponseToUser(data);
+          const response = await fetchMe();
+          const user: User = authResponseToUser(response.data);
            
           set({ user: user, isAuthenticated: true, isBooting: false });
         } catch {
