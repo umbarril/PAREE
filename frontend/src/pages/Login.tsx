@@ -1,32 +1,25 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from "react";
-// import { useNavigate } from "react-router";
+import { useNavigate } from "react-router";
+import { Box, Container, TextField, Button, Typography, Paper, Alert, CircularProgress } from "@mui/material";
 import { fetchAuthData } from "../services/LoginService";
 import { authResponseToUser, useAuthStore } from "../store/AuthStore";
-import { useNavigate } from "react-router";
 
+// lista de erros para por mensage:
+// 400 - Bad Request: "Por favor, insira um nome de usuário e senha válidos."
+// 401 - Unauthorized: "Credenciais inválidas. Por favor, tente novamente."
+// 500 - Internal Server Error: "Ocorreu um erro no servidor. Por favor, tente novamente mais tarde."
 export default function LoginPortal(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  if (isAuthenticated) {
-    useEffect(() => {
-      navigate("/");
-    }, [navigate]);
-
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Você já está logado</h1>
-          <p className="text-gray-500">Redirecionando para a página inicial...</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (isAuthenticated) navigate("/");
+  }, [isAuthenticated, navigate]);
 
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -47,112 +40,81 @@ export default function LoginPortal(): JSX.Element {
       login(authResponseToUser(response.data));
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : "Erro desconhecido");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col max-w-md h-screen items-center justify-center bg-gray-50 px-4 px col-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-yellow-400">PAREE</h1>
-          <p className="text-gray-500 mt-2 uppercase tracking-wide">
-            Portal do Discente
-          </p>
-          <p className="text-gray-400 mt-2 text-sm uppercase tracking-wide">
-            Conceito de interface para o SIGAA
-          </p>
-        </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: { xs: 2, sm: 4 },
+        background: 'linear-gradient(180deg, #f3f4f6 0%, #e6e9ef 100%)'
+      }}
+    >
+      <Container maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Paper elevation={3} sx={{ width: '100%', p: 4, borderRadius: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+          <Box component="img" src="/logo.png" alt="PAREE logo" loading="lazy" sx={{ width: { xs: 64, sm: 72, md: 96 }, height: { xs: 64, sm: 72, md: 72 }, objectFit: 'contain' }} />
+          <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+            <Typography variant="h4" component="h1" color="error.main" fontWeight={700}>
+              PAREE
+            </Typography>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Portal do Discente
+            </Typography>
+            <Typography variant="caption" color="text.disabled" display="block">
+              Conceito de interface para o SIGAA
+            </Typography>
+          </Box>
+        </Box>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
-            {error}
-          </div>
+          <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Nome de Usuário
-            </label>
-            <input
-              id="username"
-              type="text"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              placeholder="Nome de usuário"
-              value={username}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setUsername(e.target.value)
-              }
-            />
-          </div>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: 'grid', gap: 2 }}>
+          <TextField
+            id="username"
+            label="Nome de Usuário"
+            value={username}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+            fullWidth
+            required
+            autoComplete="username"
+          />
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              placeholder="Senha"
-              value={password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setPassword(e.target.value)
-              }
-              className="
-                mt-1 block w-full px-3 py-2 
-                border border-gray-300 rounded-md shadow-sm 
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-                transition-all"
-            />
-          </div>
+          <TextField
+            id="password"
+            label="Senha"
+            type="password"
+            value={password}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            fullWidth
+            required
+            autoComplete="current-password"
+          />
 
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Button variant="text" onClick={() => navigate('/about')}>Sobre</Button>
+            <Button variant="text" onClick={() => { /* TODO: implementar recuperação */ }}>
               Esqueceu a senha?
-            </button>
-          </div>
+            </Button>
+          </Box>
 
-          <button
-            type="submit"
-            disabled={loading}
-            aria-busy={loading}
-            className={`
-              w-full flex items-center justify-center gap-2 py-2.5
-              px-4 border border-transparent 
-              rounded-md shadow-sm text-sm 
-              font-bold text-white 
-              bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
-              transition-colors ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
-          >
-            {loading ? (
-              <>
-                <svg className="w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                </svg>
-                Autenticando...
-              </>
-            ) : (
-              "ENTRAR NO PORTAL"
-            )}
-          </button>
-        </form>
-      </div>
-    </div>
+          <Button type="submit" variant="contained" color="primary" disabled={loading} fullWidth sx={{ py: 1.5 }}>
+            {loading ? <><CircularProgress size={20} color="inherit" sx={{ mr: 1 }} /> Autenticando...</> : 'ENTRAR NO PORTAL'}
+          </Button>
+        </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
 
