@@ -9,7 +9,7 @@ import type { Arquivo, CoursePlanResponse, LessonTopic } from "../types/CoursePl
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink } from "@mui/material";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from "@mui/material";
 import { BiExpandVertical, BiMailSend } from "react-icons/bi";
 
 export default function Classes(): JSX.Element {
@@ -391,20 +391,20 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
                   const email = (s as any).email;
                   const isTrancado = ((s.situacaoMatricula || '').toUpperCase() === 'TRANCADO');
                   return (
-                <ListItem key={s.matricula ?? s.nome ?? i} secondaryAction={
+                    <ListItem key={s.matricula ?? s.nome ?? i} secondaryAction={
                       email ? (
                         <IconButton component="a" href={`mailto:${email}`} edge="end" aria-label="email" title={`Enviar e-mail para ${s.nome}`}>
                           <BiMailSend />
                         </IconButton>
                       ) : (
                         <IconButton edge="end" aria-label="email" disabled>
-                    <BiMailSend />
-                  </IconButton>
+                          <BiMailSend />
+                        </IconButton>
                       )
-                }>
-                  <ListItemAvatar>
+                    }>
+                      <ListItemAvatar>
                         <Avatar src={(s as any).urlFoto} sx={{ filter: isTrancado ? 'grayscale(100%)' : 'none', opacity: isTrancado ? 0.6 : 1 }}>{s.nome ? s.nome[0] : '?'}</Avatar>
-                  </ListItemAvatar>
+                      </ListItemAvatar>
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -419,7 +419,7 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
                           </Box>
                         }
                       />
-                </ListItem>
+                    </ListItem>
                   )
                 })
               })()}
@@ -447,13 +447,83 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
         run();
     }, [id]);
 
+    // Render two tables: Grades (notasPorUnidade) and Misses/Attendance (if detailed data exists show rows, otherwise show summary)
     return (
-        <div className="flex items-center justify-between mb-4">
-            <div>
-            <h2 className="m-0 text-xl font-semibold">
-                Outros
-            </h2>
-            </div>
-        </div>
+      <Container maxWidth="lg">
+        <Typography variant="h5" sx={{ mb: 2 }}>Mapa de Frequências & Notas</Typography>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6">Notas por Unidade</Typography>
+            <TableContainer component={Paper} sx={{ mt: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Unidade</TableCell>
+                    <TableCell>Nota</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(gradesAndMisses?.notasPorUnidade ?? []).map((n, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{n.unidade}</TableCell>
+                      <TableCell>{n.nota}</TableCell>
+                    </TableRow>
+                  ))}
+                  {(!gradesAndMisses || (gradesAndMisses.notasPorUnidade ?? []).length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={2} sx={{ color: 'text.secondary' }}>Nenhuma nota disponível.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Card sx={{ mt: 2, p: 2 }}>
+              <Typography variant="body2">Média final: <strong>{gradesAndMisses?.mediaFinal ?? '—'}</strong></Typography>
+              <Typography variant="body2">Situação: <strong>{gradesAndMisses?.situacao ?? '—'}</strong></Typography>
+              {gradesAndMisses?.recuperacao !== null && <Typography variant="body2">Recuperação: <strong>{gradesAndMisses?.recuperacao}</strong></Typography>}
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6">Mapa de Frequências</Typography>
+            {/* If detailed attendance rows are present render them; otherwise show summary */}
+            <TableContainer component={Paper} sx={{ mt: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Data</TableCell>
+                    <TableCell>Situação</TableCell>
+                    <TableCell>Falta justificada?</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {/* Some backends may provide a detailed list under gradesAndMisses.faltasDetalhadas or similar. Try to render if present. */}
+                  {((gradesAndMisses as any)?.faltasDetalhadas ?? []).map((r: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell>{r.data ?? r.dataFalta ?? ''}</TableCell>
+                      <TableCell>{r.situacao ?? ''}</TableCell>
+                      <TableCell>{r.justificada ? 'Sim' : (r.justificada === false ? 'Não' : '')}</TableCell>
+                    </TableRow>
+                  ))}
+
+                  {/* If no detailed rows, show a placeholder row with totals if available */}
+                  {(!((gradesAndMisses as any)?.faltasDetalhadas) || ((gradesAndMisses as any)?.faltasDetalhadas.length === 0)) && (
+                    <TableRow>
+                      <TableCell colSpan={3}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Typography variant="body2">Total de Faltas: <strong>{gradesAndMisses?.numeroDeFaltas ?? '—'}</strong></Typography>
+                          <Typography variant="body2">Total de Faltas Justificadas: <strong>{(gradesAndMisses as any)?.numeroDeFaltasJustificadas ?? '—'}</strong></Typography>
+                          <Typography variant="body2">Máximo de Faltas Permitido: <strong>{(gradesAndMisses as any)?.maximoFaltasPermitido ?? '—'}</strong></Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+        </Grid>
+      </Container>
     )
 }
