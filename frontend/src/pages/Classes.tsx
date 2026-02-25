@@ -10,7 +10,7 @@ import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
 import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from "@mui/material";
-import { BiExpandVertical, BiMailSend } from "react-icons/bi";
+import { BiBookBookmark, BiBookmark, BiDetail, BiExpandVertical, BiMailSend } from "react-icons/bi";
 
 export default function Classes(): JSX.Element {
   const { id } = useParams();
@@ -174,9 +174,26 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 
     const fmtDate = (d?: string|null) => {
       if (!d) return 'Sem data';
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return d;
-      return dt.toLocaleDateString();
+      const str = String(d);
+      const dt = new Date(str);
+      if (!isNaN(dt.getTime())) {
+        const dateStr = dt.toLocaleDateString();
+        const hasTime = dt.getHours() !== 0 || dt.getMinutes() !== 0 || dt.getSeconds() !== 0;
+        if (hasTime) {
+          const hh = String(dt.getHours()).padStart(2, '0');
+          return `${dateStr} ${hh}h`;
+        }
+        return dateStr;
+      }
+
+      // fallback: try to extract date and time fragments
+      const dateMatch = str.match(/(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/);
+      const timeMatch = str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      let out = '';
+      if (dateMatch) out += dateMatch[0];
+      if (timeMatch) out += (out ? ' ' : '') + `${timeMatch[1].padStart(2, '0')}h`;
+      if (out) return out;
+      return str;
     }
 
     return (
@@ -237,13 +254,18 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 
             if (!hasContent) {
               return (
-                <Card key={idx} sx={{ mb: 1, p: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                      <Typography variant="subtitle1">{it.title}</Typography>
-                      <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                <Card key={idx} sx={{ mb: 1, p: 0 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ width: 44, height: 44, borderRadius: '50%', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.main' }}>
+                        {it.kind === 'topico' ? <BiBookBookmark /> : <BiDetail />}
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1">{it.title}</Typography>
+                        <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                      </Box>
                     </Box>
-                    <Typography variant="caption" color="text.secondary">{fmtDate(it.date)}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 120, textAlign: 'right', flexShrink: 0 }}>{fmtDate(it.date)}</Typography>
                   </Box>
                 </Card>
               );
@@ -251,13 +273,18 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 
             return (
               <Accordion key={idx} disableGutters>
-                <AccordionSummary expandIcon={<BiExpandVertical />}>
+                <AccordionSummary expandIcon={<BiExpandVertical />} sx={{ px: 2, py: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="subtitle1">{it.title}</Typography>
-                      <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ width: 44, height: 44, borderRadius: '50%', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.main' }}>
+                        {it.kind === 'topico' ? <BiBookBookmark /> : <BiDetail />}
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1">{it.title}</Typography>
+                        <Typography variant="caption" color="text.secondary">{it.kind.toUpperCase()}</Typography>
+                      </Box>
                     </Box>
-                    <Typography variant="caption" color="text.secondary">{fmtDate(it.date)}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 120, textAlign: 'right', flexShrink: 0 }}>{fmtDate(it.date)}</Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
