@@ -181,7 +181,54 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 
     return (
       <div>
-        <Typography variant="h6" gutterBottom>Plano de Curso</Typography>
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              <Box>
+                <Typography variant="h5">Informações da Disciplina</Typography>
+                <Typography variant="caption" color="text.secondary">Resumo do plano e informações importantes</Typography>
+              </Box>
+            </Box>
+
+            <Grid container spacing={2} sx={{ mt: 2 }}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2">Objetivos</Typography>
+                <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.objetivos || '') }} />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2">Conteúdo</Typography>
+                <Box sx={{ color: 'text.secondary', mt: 0.5, maxHeight: 140, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.conteudo || '') }} />
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Typography variant="subtitle2">Procedimento de Avaliação</Typography>
+                <Typography variant="body2" color="text.secondary">{String(coursePlan.procedimentoAvaliacaoAprendizagem ?? '—')}</Typography>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Typography variant="subtitle2">Horário de Atendimento</Typography>
+                <Typography variant="body2" color="text.secondary">{coursePlan.horarioAtendimento ?? '—'}</Typography>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Typography variant="subtitle2">Competências / Habilidades</Typography>
+                <Box sx={{ color: 'text.secondary' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.habilidadesCompetencias || '') }} />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2">Exame Final / Reposição</Typography>
+                <Typography variant="body2" color="text.secondary">Exame: {coursePlan.exameFinal ?? '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">Hora exame: {coursePlan.horaExameFinal ?? '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">Reposição: {coursePlan.reposicao ?? '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">Hora reposição: {coursePlan.horaReposicao ?? '—'}</Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        <Typography variant="h6" gutterBottom>Itens do Plano de Curso</Typography>
+
         <div>
           {items.length === 0 && <Typography color="text.secondary">Nenhum item no plano.</Typography>}
           {items.map((it, idx) => {
