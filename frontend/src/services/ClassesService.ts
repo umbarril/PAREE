@@ -11,24 +11,16 @@ export async function fetchClasses(matricula: string): Promise<AxiosResponse<Tur
     return api.get(`/sigaa/mobile/discente/${matricula}/turmas`);
 }
 
-export async function fetchClassDetails(matricula: string, idTurma: string): Promise<AxiosResponse<string>> {
-    return api.get(`/sigaa/mobile/discente/${matricula}/turma/${idTurma}`);
-}
-
 export async function fetchClassNews(idTurma: string): Promise<NewsPieceResponse[]> {
     const response = await api.get(`/sigaa/mobile/turma/${idTurma}/noticias`);
     return response.data;
 }
 
-// todo: testar
-// todo: corrigir url
 export async function fetchClassCoursePlan(idTurma: string): Promise<CoursePlanResponse> {
     const response = await api.get(`/sigaa/mobile/turma/${idTurma}/plano-de-curso`);
     return response.data;
 }
 
-// todo: testar
-// todo: corrigir url
 export async function fetchClassMissesAndGrades(matricula: string, idTurma: string): Promise<MissesAndGradesResponse> {
     const response = await api.get(`/sigaa/mobile/turma/${matricula}/${idTurma}/faltas-notas`);
 
@@ -46,15 +38,11 @@ export async function fetchClassMissesAndGrades(matricula: string, idTurma: stri
 //     return response.json();
 // }
 
-// todo: testar
-// todo: corrigir url
 export async function fetchClassStudents(idTurma: string): Promise<StudentResponse[]> {
     const response = await api.get(`/sigaa/mobile/turma/${idTurma}/discentes`);
     return response.data;
 }
 
-// todo: testar
-// todo: corrigir url
 export async function fetchClassProfessors(idTurma: string): Promise<ProfessorResponse[]> {
     const response = await api.get(`/sigaa/mobile/turma/${idTurma}/docentes`);
     return response.data;
