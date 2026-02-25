@@ -9,8 +9,8 @@ import type { Arquivo, CoursePlanResponse, LessonTopic } from "../types/CoursePl
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from "@mui/material";
-import { BiBookBookmark, BiBookmark, BiDetail, BiExpandVertical, BiMailSend } from "react-icons/bi";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem } from "@mui/material";
+import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend } from "react-icons/bi";
 
 export default function Classes(): JSX.Element {
   const { id } = useParams();
@@ -96,6 +96,25 @@ export default function Classes(): JSX.Element {
 function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
     const [news, setNews] = useState<NewsPieceResponse[]>([]);
     const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuEmail, setMenuEmail] = useState<string | null>(null);
+
+  const handleMenuOpen = (e: any, email?: string) => {
+    setMenuAnchorEl(e.currentTarget);
+    setMenuEmail(email ?? null);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    setMenuEmail(null);
+  };
+
+  const handleSendEmail = () => {
+    if (menuEmail) {
+      window.location.href = `mailto:${menuEmail}`;
+    }
+    handleMenuClose();
+  };
 
     useEffect(() => { 
         setLoading(true)
@@ -133,22 +152,31 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
               return (
                 <Grid key={n.idTurma} sx={{ display: 'flex', justifyContent: 'center', width: 'auto' }}>
                   <Card sx={{ width: { xs: '100%', sm: 520, md: 640 }, display: 'flex', flexDirection: 'column', flex: '0 0 auto', minHeight: 240 }}>
-                    <CardHeader
+                    <CardHeader sx={{ pb: 0.5 }}
                       avatar={
                         prof && prof.urlFoto? 
                         <Avatar alt={prof.nome} src={prof.urlFoto} /> : 
                         <Avatar>{n.nomePessoaCadastro?.[0] ?? '?'}</Avatar>
                     }
-                      title={n.descricaoNoticia}
+                      title={prof?.nome ?? n.nomePessoaCadastro ?? 'Desconecido'}
                       subheader={<Tooltip title={fullTimestamp}><Typography variant="caption">{shortDate}</Typography></Tooltip>}
+                      action={
+                        <IconButton aria-label="settings" onClick={(e) => handleMenuOpen(e, (prof as any)?.email ?? ((n as any).email ?? ''))}>
+                            <BiDotsVerticalRounded />
+                        </IconButton>
+                        }
                     />
-                    <CardContent sx={{ flex: 1, overflow: 'hidden' }}>
-                      <Box sx={{ color: 'text.secondary', overflowWrap: 'anywhere', wordBreak: 'break-word', '& img': { maxWidth: '100%', height: 'auto' } }} dangerouslySetInnerHTML={{ __html: cleanHtml }} />
+                    <CardContent sx={{ flex: 1, overflow: 'hidden', pt: 1 }}>
+                        <Typography variant="h6" sx={{ mb: 0.5 }}>{n.descricaoNoticia}</Typography>
+                        <Box sx={{ color: 'text.secondary', overflowWrap: 'anywhere', wordBreak: 'break-word', '& img': { maxWidth: '100%', height: 'auto' } }} dangerouslySetInnerHTML={{ __html: cleanHtml }} />
                     </CardContent>
                   </Card>
                 </Grid>
               );
             })}
+            <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+              <MenuItem onClick={handleSendEmail} disabled={!menuEmail}>Enviar e-mail</MenuItem>
+            </Menu>
           </Grid>
         </Container>
         </>
