@@ -9,8 +9,8 @@ import type { Arquivo, CoursePlanResponse, LessonTopic } from "../types/CoursePl
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Stack, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Link as MuiLink } from "@mui/material";
-import { BiExpandVertical } from "react-icons/bi";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink } from "@mui/material";
+import { BiExpandVertical, BiMailSend } from "react-icons/bi";
 
 export default function Classes(): JSX.Element {
   const { id } = useParams();
@@ -340,13 +340,62 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
     }, [id]);
     
     return (
-        <div className="flex items-center justify-between mb-4">
-            <div>
-            <h2 className="m-0 text-xl font-semibold">
-                Participantes
-            </h2>
-            </div>
-        </div>
+      <Container maxWidth="md">
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5">Professores</Typography>
+          <Card sx={{ mt: 1 }}>
+            <List>
+              {professors.length === 0 && (
+                <ListItem>
+                  <ListItemText primary="Nenhum professor listado." />
+                </ListItem>
+              )}
+              {professors.map((p, i) => (
+                <ListItem key={p.nome || i} secondaryAction={
+                  <IconButton edge="end" aria-label="email">
+                    <BiMailSend />
+                  </IconButton>
+                }>
+                  <ListItemAvatar>
+                    <Avatar src={(p as any).urlFoto}>{p.nome ? p.nome[0] : '?'}</Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={p.nome ?? 'Professor'} secondary={(p as any).email ?? ''} />
+                </ListItem>
+              ))}
+            </List>
+          </Card>
+        </Box>
+
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h5">Colegas de turma</Typography>
+            <Typography variant="caption">{students ? `${students.length} estudantes` : ''}</Typography>
+          </Box>
+
+          <Card sx={{ mt: 1 }}>
+            <List>
+              {(!students || students.length === 0) && (
+                <ListItem>
+                  <ListItemText primary="Nenhum estudante listado." />
+                </ListItem>
+              )}
+
+              {students && students.map((s, i) => (
+                <ListItem key={s.matricula ?? s.nome ?? i} secondaryAction={
+                  <IconButton edge="end" aria-label="email">
+                    <BiMailSend />
+                  </IconButton>
+                }>
+                  <ListItemAvatar>
+                    <Avatar src={(s as any).urlFoto}>{s.nome ? s.nome[0] : '?'}</Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary={s.nome ?? 'Estudante'} secondary={(s as any).email ?? ''} />
+                </ListItem>
+              ))}
+            </List>
+          </Card>
+        </Box>
+      </Container>
     )
 }
 
@@ -354,8 +403,7 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
 function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: string; setLoading: (loading: boolean) => void }): JSX.Element {
     const [gradesAndMisses, setGradesAndMisses] = useState<MissesAndGradesResponse>();
 
-    useEffect(() => { // todo: melhorar isso, ta meio gambiarra, tem que mostrar loading enquanto carrega, e nao pode ficar setando loading true toda hora
-        // sem falar que isso não cacheia
+    useEffect(() => {
         // setLoading(true)
         console.log("Fetching class course plan for class id:", id);
         async function run() {
