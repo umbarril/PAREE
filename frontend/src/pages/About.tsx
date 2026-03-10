@@ -11,8 +11,13 @@ export default function About(): JSX.Element {
                         <Typography variant="h4" component="h1" color="error.main" fontWeight={700}>
                             PAREE
                         </Typography>
+
                         <Typography variant="subtitle1" sx={{ mt: 1 }}>
                             Projeto de Trabalho de Conclusão de Curso (TCC)
+                        </Typography>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Uma interface alternativa para o Portal do Discente da UFPB, construída com React e TypeScript, utilizando dados extraídos por meio da API mobile.
                         </Typography>
 
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
