@@ -453,18 +453,30 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
                   <ListItemText primary="Nenhum professor listado." />
                 </ListItem>
               )}
-              {professors.map((p, i) => (
-                <ListItem key={p.nome || i} secondaryAction={
-                  <IconButton edge="end" aria-label="email">
-                    <BiMailSend />
-                  </IconButton>
-                }>
-                  <ListItemAvatar>
-                    <Avatar src={(p as any).urlFoto}>{p.nome ? p.nome[0] : '?'}</Avatar>
-                  </ListItemAvatar>
-                  <ListItemText primary={p.nome ?? 'Professor'} secondary={(p as any).email ?? ''} />
-                </ListItem>
-              ))}
+              {professors.map((p, i) => {
+                const email = (p as any).email;
+                return (
+                  <ListItem
+                    key={p.nome || i}
+                    secondaryAction={
+                      email ? (
+                        <IconButton component="a" href={`mailto:${email}`} edge="end" aria-label={`Enviar e-mail para ${p.nome}`} title={`Enviar e-mail para ${p.nome}`}>
+                          <BiMailSend />
+                        </IconButton>
+                      ) : (
+                        <IconButton edge="end" aria-label="email" disabled>
+                          <BiMailSend />
+                        </IconButton>
+                      )
+                    }
+                  >
+                    <ListItemAvatar>
+                      <Avatar src={(p as any).urlFoto}>{p.nome ? p.nome[0] : '?'}</Avatar>
+                    </ListItemAvatar>
+                    <ListItemText primary={p.nome ?? 'Professor'} secondary={email ?? ''} />
+                  </ListItem>
+                );
+              })}
             </List>
           </Card>
         </Box>
