@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from "react";
 import { useNavigate, Link as RouterLink } from "react-router";
-import { Box, Container, TextField, Button, Typography, Paper, Alert, CircularProgress } from "@mui/material";
+import { Box, Container, TextField, Button, Typography, Paper, Alert, CircularProgress, IconButton, Tooltip } from "@mui/material";
+import { BiInfoCircle } from "react-icons/bi";
 import axios from "axios";
 import { fetchAuthData } from "../services/LoginService";
 import { authResponseToUser, useAuthStore } from "../store/AuthStore";
@@ -98,6 +99,18 @@ export default function LoginPortal(): JSX.Element {
     >
       <Container maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Paper elevation={3} sx={{ width: '100%', p: 4, borderRadius: 3 }}>
+        <Box sx={{ position: 'relative' }}>
+          <Tooltip title="Sobre">
+            <IconButton
+              component={RouterLink}
+              to="/about"
+              aria-label="Sobre"
+              title="Sobre"
+              sx={{ position: 'absolute', top: 8, right: 8 }}
+            >
+              <BiInfoCircle />
+            </IconButton>
+          </Tooltip>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
           <Box component="img" src="/logo.png" alt="PAREE logo" loading="lazy" sx={{ width: { xs: 64, sm: 72, md: 96 }, height: { xs: 64, sm: 72, md: 72 }, objectFit: 'contain' }} />
           <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
@@ -106,9 +119,6 @@ export default function LoginPortal(): JSX.Element {
             </Typography>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5, textTransform: 'uppercase', letterSpacing: 1 }}>
               Portal do Discente
-            </Typography>
-            <Typography variant="caption" color="text.disabled" display="block">
-              Conceito de interface para o SIGAA
             </Typography>
           </Box>
         </Box>
@@ -142,7 +152,6 @@ export default function LoginPortal(): JSX.Element {
           />
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button variant="text" component={RouterLink} to="/about">Sobre</Button>
             <Button
               variant="text"
               component="a"
@@ -155,6 +164,7 @@ export default function LoginPortal(): JSX.Element {
           <Button type="submit" variant="contained" color="primary" disabled={loading} fullWidth sx={{ py: 1.5 }}>
             {loading ? <><CircularProgress size={20} color="inherit" sx={{ mr: 1 }} /> Autenticando...</> : 'ENTRAR NO PORTAL'}
           </Button>
+        </Box>
         </Box>
         </Paper>
       </Container>
