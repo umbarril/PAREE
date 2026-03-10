@@ -57,12 +57,12 @@ export default function LoginPortal(): JSX.Element {
         } else {
           const status = err.response.status;
           if (status === 400) {
-            // erro de credenciais: mostrar apenas nos campos (helperText)
-            setError(null);
+            // erro de credenciais: limpar campos e mostrar apenas nos helpers dos campos
+            setUsername("");
+            setPassword("");
             setUsernameError(true);
             setPasswordError(true);
-            setUsernameHelper("Credenciais incorretas");
-            setPasswordHelper("Credenciais incorretas");
+            setError("Credenciais incorretas.");
           } else if (status === 503) {
             setError("Incapaz de acessar os servidores do SIGAA. Tente novamente mais tarde.");
             setUsernameError(false);
@@ -113,7 +113,7 @@ export default function LoginPortal(): JSX.Element {
           </Box>
         </Box>
 
-        {error && !(usernameError || passwordError) && (
+        {error && (
           <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
         )}
 
