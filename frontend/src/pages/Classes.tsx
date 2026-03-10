@@ -9,7 +9,7 @@ import type { Arquivo, CoursePlanResponse, LessonTopic } from "../types/CoursePl
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem } from "@mui/material";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress } from "@mui/material";
 import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend } from "react-icons/bi";
 
 export default function Classes(): JSX.Element {
@@ -57,38 +57,39 @@ export default function Classes(): JSX.Element {
           {error}
         </div>
       )}
-      {loading ? (
-        <h1>Loading...</h1>
-      ) : (
-        <div className="flex-1 flex flex-col">
-          <main className="p-6 overflow-auto">
-            <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs
-                value={menu}
-                onChange={(_, v) => {
-                  const idx = v as number;
-                  setMenu(idx);
-                  const base = `/class/${id}`;
-                  const path = idx === 0 ? base : idx === 1 ? `${base}/courseplan` : idx === 2 ? `${base}/people` : `${base}/other`;
-                  navigate(path);
-                }}
-                textColor="primary"
-                indicatorColor="primary"
-              >
-                {menuList.map((item, index) => (
-                  <Tab label={item} key={index} />
-                ))}
-              </Tabs>
-            </Box>
 
-            {menu === 0 && <MainClassesMenu id={id!} setLoading={setLoading} />}
-            {menu === 1 && <CoursePlanMenu id={id!} setLoading={setLoading} />}
-            {menu === 2 && <ParticipantsMenu id={id!} setLoading={setLoading} />}
-            {menu === 3 && <OthersMenu matricula={user?.matricula ? user.matricula : ""} id={id!} setLoading={setLoading} />}
-          </main>
-        </div>
-      )}{" "}
-      ;
+      {/* Linear progress just below the topbar to indicate any page-level loading */}
+      <Box sx={{ width: '100%' }}>
+        {loading && <LinearProgress />}
+      </Box>
+
+      <div className="flex-1 flex flex-col">
+        <main className="p-6 overflow-auto">
+          <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs
+              value={menu}
+              onChange={(_, v) => {
+                const idx = v as number;
+                setMenu(idx);
+                const base = `/class/${id}`;
+                const path = idx === 0 ? base : idx === 1 ? `${base}/courseplan` : idx === 2 ? `${base}/people` : `${base}/other`;
+                navigate(path);
+              }}
+              textColor="primary"
+              indicatorColor="primary"
+            >
+              {menuList.map((item, index) => (
+                <Tab label={item} key={index} />
+              ))}
+            </Tabs>
+          </Box>
+
+          {menu === 0 && <MainClassesMenu id={id!} setLoading={setLoading} />}
+          {menu === 1 && <CoursePlanMenu id={id!} setLoading={setLoading} />}
+          {menu === 2 && <ParticipantsMenu id={id!} setLoading={setLoading} />}
+          {menu === 3 && <OthersMenu matricula={user?.matricula ? user.matricula : ""} id={id!} setLoading={setLoading} />}
+        </main>
+      </div>
     </Base>
   );
 }
@@ -117,20 +118,27 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
   };
 
     useEffect(() => { 
-        setLoading(true)
-        console.log("Fetching class news for class id:", id);
-        async function run() {
-            fetchClassNews(id!).then((details) => {
-                console.log(details);
-                setNews(details);
-            });
-            fetchClassProfessors(id!).then((details) => {
-                console.log(details);
-                setProfessors(details);
-            });
-            setLoading(false);
+      let mounted = true;
+      console.log("Fetching class news for class id:", id);
+      async function run() {
+        setLoading(true);
+        try {
+          const [newsDetails, profDetails] = await Promise.all([
+            fetchClassNews(id!),
+            fetchClassProfessors(id!),
+          ]);
+          if (!mounted) return;
+          console.log(newsDetails, profDetails);
+          setNews(newsDetails);
+          setProfessors(profDetails);
+        } catch (e) {
+          console.error("Error fetching class data:", e);
+        } finally {
+          if (mounted) setLoading(false);
         }
-        run();
+      }
+      run();
+      return () => { mounted = false; };
     }, [id]);
 
     return (
@@ -187,14 +195,21 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
     const [coursePlan, setCoursePlan] = useState<CoursePlanResponse>();
 
     useEffect(() => {
-        // setLoading(true);
-        async function run() {
-            // try {
-                const details = await fetchClassCoursePlan(id!);
-                setCoursePlan(details);
-            // } finally { setLoading(false); }
+      let mounted = true;
+      async function run() {
+        setLoading(true);
+        try {
+          const details = await fetchClassCoursePlan(id!);
+          if (!mounted) return;
+          setCoursePlan(details);
+        } catch (e) {
+          console.error("Error fetching course plan:", e);
+        } finally {
+          if (mounted) setLoading(false);
         }
-        run();
+      }
+      run();
+      return () => { mounted = false; };
     }, [id]);
 
     if (!coursePlan) {
@@ -404,20 +419,27 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
     const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
 
     useEffect(() => {
-        // setLoading(true)
-        console.log("Fetching class course plan for class id:", id);
-        async function run() {
-            fetchClassStudents(id!).then((details) => {
-                console.log(details);
-                setStudents(details);
-            });
-            fetchClassProfessors(id!).then((details) => {
-                console.log(details);
-                setProfessors(details);
-            });
-            // setLoading(false);
+      let mounted = true;
+      console.log("Fetching class course plan for class id:", id);
+      async function run() {
+        setLoading(true);
+        try {
+          const [studentsDetails, profDetails] = await Promise.all([
+            fetchClassStudents(id!),
+            fetchClassProfessors(id!),
+          ]);
+          if (!mounted) return;
+          console.log(studentsDetails, profDetails);
+          setStudents(studentsDetails);
+          setProfessors(profDetails);
+        } catch (e) {
+          console.error("Error fetching participants:", e);
+        } finally {
+          if (mounted) setLoading(false);
         }
-        run();
+      }
+      run();
+      return () => { mounted = false; };
     }, [id]);
     
     return (
@@ -516,16 +538,23 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
     const [gradesAndMisses, setGradesAndMisses] = useState<MissesAndGradesResponse>();
 
     useEffect(() => {
-        // setLoading(true)
-        console.log("Fetching class course plan for class id:", id);
-        async function run() {
-            fetchClassMissesAndGrades(matricula, id!).then((details) => {
-                console.log(details);
-                setGradesAndMisses(details);
-            });
-            // setLoading(false);
+      let mounted = true;
+      console.log("Fetching class course plan for class id:", id);
+      async function run() {
+        setLoading(true);
+        try {
+          const details = await fetchClassMissesAndGrades(matricula, id!);
+          if (!mounted) return;
+          console.log(details);
+          setGradesAndMisses(details);
+        } catch (e) {
+          console.error("Error fetching grades/misses:", e);
+        } finally {
+          if (mounted) setLoading(false);
         }
-        run();
+      }
+      run();
+      return () => { mounted = false; };
     }, [id]);
 
     // Render two tables: Grades (notasPorUnidade) and Misses/Attendance (if detailed data exists show rows, otherwise show summary)
