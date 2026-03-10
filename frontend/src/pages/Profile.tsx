@@ -78,7 +78,7 @@ export default function Profile(): JSX.Element {
                         </ul>
 
                         <div className="mt-6 flex gap-3">
-                                <button className="px-4 py-2 border rounded" onClick={() => logout()}>Sair.</button>
+                                <button className="px-4 py-2 border rounded" onClick={() => logout()}>Sair</button>
                         </div>
                     </div>
                 </div>
