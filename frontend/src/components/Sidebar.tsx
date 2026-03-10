@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { BiCalendar, BiClipboard, BiCog, BiDetail, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
+import { BiCalendar, BiClipboard, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
 import { NavLink } from "react-router";
 
 const navItemBase = "flex items-center gap-3 text-sm px-3 py-2 rounded-lg";
@@ -67,20 +67,6 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
       </NavLink>
 
       <div className="mt-auto">
-        {/* <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `${navItemBase} ${
-              isActive ? navItemActive : navItemInactive
-            }`
-          }
-        >
-          <span>
-            <BiCog />
-          </span>
-          Configurações
-        </NavLink> */}
-
         <NavLink
           to="/logout"
           className={({ isActive }) =>
@@ -103,7 +89,7 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
         aria-hidden={!sidebarOpen}
         className={`${
           sidebarOpen ? "w-56 border-r border-slate-200 p-5" : "w-0 p-0 border-0"
-        } hidden sm:flex bg-white rounded-xl shadow-sm flex-col transition-all duration-200 ease-in-out h-full`}
+        } hidden sm:flex bg-white shadow-sm flex-col transition-all duration-200 ease-in-out h-full`}
       >
         {nav}
       </aside>
