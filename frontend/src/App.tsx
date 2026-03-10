@@ -16,7 +16,6 @@ import { Documents } from './pages/Documents.tsx'
 
 // todo: ouvir com  o wireshark como as requisicoes estao sendo feitas
 const router = createBrowserRouter([
-  { path: '/login', element: <LoginPortal /> },
   { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
   { path: '/profile', element: (<ProtectedRoute><Profile /></ProtectedRoute>) },
   { path: '/documents', element: (<ProtectedRoute><Documents /></ProtectedRoute>) },
@@ -24,11 +23,12 @@ const router = createBrowserRouter([
   { path: '/class/:id/courseplan', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
   { path: '/class/:id/people', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
   { path: '/class/:id/other', element: (<ProtectedRoute><Classes /></ProtectedRoute>) },
-  { path: '/about', element: (<ProtectedRoute><About /></ProtectedRoute>) },
   { path: '/calendar', element: (<ProtectedRoute><Calendar /></ProtectedRoute>) },
   { path: '/library', element: (<ProtectedRoute><Library /></ProtectedRoute>) },
   { path: '/settings', element: (<ProtectedRoute><Settings /></ProtectedRoute>) },
   { path: '/logout', element: (<ProtectedRoute><Logout /></ProtectedRoute>) },
+  { path: '/login', element: <LoginPortal /> },
+  { path: '/about', element: <About /> },
   { path: '*', element: <NotFound /> },
 ])
 

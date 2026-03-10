@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link as RouterLink } from "react-router";
 import { Box, Container, TextField, Button, Typography, Paper, Alert, CircularProgress } from "@mui/material";
 import { fetchAuthData } from "../services/LoginService";
 import { authResponseToUser, useAuthStore } from "../store/AuthStore";
@@ -102,8 +102,12 @@ export default function LoginPortal(): JSX.Element {
           />
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button variant="text" onClick={() => navigate('/about')}>Sobre</Button>
-            <Button variant="text" onClick={() => { /* TODO: implementar recuperação */ }}>
+            <Button variant="text" component={RouterLink} to="/about">Sobre</Button>
+            <Button
+              variant="text"
+              component="a"
+              href="https://sigaa.ufpb.br/sigaa/public/cadastro/cadastro.jsf"
+            >
               Esqueceu a senha?
             </Button>
           </Box>
