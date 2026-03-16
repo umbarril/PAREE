@@ -1,9 +1,8 @@
+import type { LibraryResponse } from "../types/LibraryResponse";
 import api from "./Axios";
 
-// todo
-export async function fetchBorrowedBooks(matricula: string): Promise<string> {
-    const response = await api.get(`/biblioteca/${matricula}/emprestimos`);
-    
+export async function fetchBorrowedBooks(): Promise<LibraryResponse> {
+    const response = await api.get(`/sigaa/mobile/biblioteca/discente/emprestimos`);
     return response.data;
 }
 

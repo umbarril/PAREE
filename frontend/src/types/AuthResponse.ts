@@ -7,13 +7,13 @@ export interface AuthResponse {
   // jti: string;
   foto: string;
   id_usuario: number;
-  nome: string;
-  DISCENTE: AuthDiscenteResponse[];
+  nome: string; // nome do usuário
+  DISCENTE: AuthDiscenteResponse[]; // vínculos ativos e não ativos
 }
 
 export interface AuthDiscenteResponse {
   matricula: number;
   idCurso: number;
-  nivel: string;
-  nome: string;
+  nivel: string; // "G" ou "M", ou similar
+  nome: string; // nome do vínculo em CAPS
 }
