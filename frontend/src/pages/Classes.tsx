@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type JSX } from "react";
 import Base from "../components/Base";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { fetchClassCoursePlan, fetchClassFrequency, fetchClassMissesAndGrades, fetchClassNews, fetchClassProfessors, fetchClassStudents } from "../services/ClassesService";
-import type { NewsPieceResponse } from "../types/NewsResponse";
 import { useAuthStore } from "../store/AuthStore";
 import DOMPurify from "dompurify";
 import type { Arquivo, CoursePlanResponse } from "../types/CoursePlanResponse";
@@ -90,45 +89,39 @@ export default function Classes(): JSX.Element {
 }
 
 function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
-    const {
-      data,
-      isFetching,
-    } = useQuery<{ news: NewsPieceResponse[]; professors: ProfessorResponse[] }>({
-      queryKey: ["class", id, "main"],
-      queryFn: async () => {
-        const [news, professors] = await Promise.all([
-          fetchClassNews(id),
-          fetchClassProfessors(id),
-        ]);
-        return { news, professors };
-      },
+    const { data: news = [], isFetching: isNewsFetching } = useQuery({
+      queryKey: ["class", id, "news"],
+      queryFn: () => fetchClassNews(id),
     });
 
-  const news = data?.news ?? [];
-  const professors = data?.professors ?? [];
-  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
-  const [menuEmail, setMenuEmail] = useState<string | null>(null);
+    const { data: professors = [], isFetching: isProfessorsFetching} = useQuery({
+      queryKey: ["class", id, "professors"],
+      queryFn: () => fetchClassProfessors(id),
+    });
 
-  const handleMenuOpen = (e: any, email?: string) => {
-    setMenuAnchorEl(e.currentTarget);
-    setMenuEmail(email ?? null);
-  };
+    const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+    const [menuEmail, setMenuEmail] = useState<string | null>(null);
 
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
-    setMenuEmail(null);
-  };
+    const handleMenuOpen = (e: any, email?: string) => {
+      setMenuAnchorEl(e.currentTarget);
+      setMenuEmail(email ?? null);
+    };
 
-  const handleSendEmail = () => {
-    if (menuEmail) {
-      window.location.href = `mailto:${menuEmail}`;
-    }
-    handleMenuClose();
-  };
+    const handleMenuClose = () => {
+      setMenuAnchorEl(null);
+      setMenuEmail(null);
+    };
+
+    const handleSendEmail = () => {
+      if (menuEmail) {
+        window.location.href = `mailto:${menuEmail}`;
+      }
+      handleMenuClose();
+    };
 
     useEffect(() => {
-      setLoading(isFetching);
-    }, [isFetching, setLoading]);
+      setLoading(isNewsFetching || isProfessorsFetching);
+    }, [isNewsFetching, isProfessorsFetching, setLoading]);
 
     return (
         <>
