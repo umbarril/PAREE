@@ -8,8 +8,8 @@ import type { Arquivo, CoursePlanResponse } from "../types/CoursePlanResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress } from "@mui/material";
-import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend } from "react-icons/bi";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress, useMediaQuery, useTheme } from "@mui/material";
+import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend, BiHomeAlt2, BiBookContent, BiGroup, BiGridAlt } from "react-icons/bi";
 import { useQuery } from "@tanstack/react-query";
 import type { FrequencyResponse, FrequencyResponseItem } from "../types/FrequencyResponse";
 
@@ -21,9 +21,12 @@ export default function Classes(): JSX.Element {
   const [menu, setMenu] = useState<number>(0);
 
   const menuList = ["Principal", "Plano de Curso", "Participantes", "Outros"];
+  const menuIcons = [BiHomeAlt2, BiBookContent, BiGroup, BiGridAlt] as const;
 
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down("sm"));
 
   const pathToMenu = (path: string) => {
     if (path.endsWith('/courseplan')) return 1;
@@ -62,6 +65,20 @@ export default function Classes(): JSX.Element {
           <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
             <Tabs
               value={menu}
+              variant={isCompact ? 'scrollable' : 'standard'}
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{
+                '& .MuiTabs-flexContainer': {
+                  gap: { xs: 0.5, sm: 1 },
+                },
+                '& .MuiTab-root': {
+                  minWidth: { xs: 86, sm: 120 },
+                  px: { xs: 1, sm: 1.5 },
+                  py: { xs: 1, sm: 1.25 },
+                  fontSize: { xs: '0.7rem', sm: '0.82rem', md: '0.875rem' },
+                },
+              }}
               onChange={(_, v) => {
                 const idx = v as number;
                 setMenu(idx);
@@ -72,9 +89,19 @@ export default function Classes(): JSX.Element {
               textColor="primary"
               indicatorColor="primary"
             >
-              {menuList.map((item, index) => (
-                <Tab label={item} key={index} />
-              ))}
+              {menuList.map((item, index) => {
+                const Icon = menuIcons[index];
+                return (
+                  <Tab
+                    key={index}
+                    label={isCompact ? undefined : item}
+                    aria-label={item}
+                    icon={<Icon size={18} />}
+                    iconPosition={isCompact ? 'top' : 'start'}
+                    wrapped={!isCompact}
+                  />
+                );
+              })}
             </Tabs>
           </Box>
 
