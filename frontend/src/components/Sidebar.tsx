@@ -1,84 +1,84 @@
+import Button from "@mui/material/Button";
 import type { JSX } from "react";
-import { BiCalendar, BiClipboard, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
+import { BiCalendar, BiClipboard, BiHome, BiLogOut, BiX } from "react-icons/bi";
 import { NavLink } from "react-router";
 
-const navItemBase = "flex items-center gap-3 text-sm px-3 py-2 rounded-lg";
-const navItemActive = "bg-indigo-50 text-indigo-700 font-semibold";
-const navItemInactive = "text-slate-900 hover:bg-slate-50";
+const navButtonSx = {
+  justifyContent: "flex-start",
+  gap: 1.5,
+  fontSize: "0.875rem",
+  px: 1.5,
+  py: 1,
+  borderRadius: 2,
+  textTransform: "none",
+  width: "100%",
+};
+
+const navButtonActiveSx = {
+  ...navButtonSx,
+  bgcolor: "#eef2ff",
+  color: "#4338ca",
+  fontWeight: 600,
+  "&:hover": { bgcolor: "#e0e7ff" },
+};
+
+const navButtonInactiveSx = {
+  ...navButtonSx,
+  color: "#0f172a",
+  "&:hover": { bgcolor: "#f8fafc" },
+};
+
+function NavButton({ to, children, end, className }: { to: string; children: React.ReactNode; end?: boolean; className?: string }) {
+  return (
+    <NavLink to={to} end={end} className={className} style={{ textDecoration: "none", display: "block" }}>
+      {({ isActive }) => (
+        <Button
+          variant="text"
+          sx={isActive ? navButtonActiveSx : navButtonInactiveSx}
+          disableRipple={false}
+        >
+          {children}
+        </Button>
+      )}
+    </NavLink>
+  );
+}
 
 export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: (open: boolean) => void }): JSX.Element {
   const { sidebarOpen, setSidebarOpen } = props;
 
   const nav = (
     <nav
-      className={`flex flex-col gap-2 flex-1 transition-opacity duration-200 ${
+      className={`flex flex-col gap-1 flex-1 transition-opacity duration-200 ${
         sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
       aria-label="Navegação principal"
       style={{ overflowY: 'auto' }}
     >
-      <NavLink
-        to="/"
-        end
-        className={({ isActive }) =>
-          `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
-        }
-      >
-        <span>
-          <BiHome />
-        </span>
+      <NavButton to="/" end>
+        <BiHome />
         Início
-      </NavLink>
+      </NavButton>
 
-      {/* <NavLink
-        to="/library"
-        className={({ isActive }) =>
-          `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
-        }
-      >
-        <span>
-          <BiLibrary />
-        </span>
+      {/* <NavButton to="/library">
+        <BiLibrary />
         Biblioteca
-      </NavLink> */}
+      </NavButton> */}
 
-      <NavLink
-        to="/calendar"
-        className={({ isActive }) =>
-          `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
-        }
-      >
-        <span>
-          <BiCalendar />
-        </span>
+      <NavButton to="/calendar">
+        <BiCalendar />
         Calendário
-      </NavLink>
+      </NavButton>
 
-      <NavLink
-        to="/documents"
-        className={({ isActive }) =>
-          `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
-        }
-      >
-        <span>
-          <BiClipboard />
-        </span>
+      <NavButton to="/documents">
+        <BiClipboard />
         Documentos
-      </NavLink>
+      </NavButton>
 
-      <div className="mt-auto">
-        <NavLink
-          to="/logout"
-          className={({ isActive }) =>
-            `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
-          }
-        >
-          <span>
-            <BiLogOut />
-          </span>
+      <NavButton to="/logout" className="mt-auto">
+          <BiLogOut />
           Sair
-        </NavLink>
-      </div>
+        </NavButton>
     </nav>
   );
 

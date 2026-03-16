@@ -1,3 +1,4 @@
+import IconButton from "@mui/material/IconButton";
 import { BiMenu } from "react-icons/bi";
 import { Link } from "react-router";
 import type { JSX } from "react/jsx-dev-runtime";
@@ -16,14 +17,14 @@ export default function Topbar(props: TopbarProps): JSX.Element {
     return(
         <header className="h-16 min-h-[64px] flex items-center justify-between px-5 py-2 border-b border-slate-200 bg-white shadow-sm">
             <div className="flex items-center gap-3">
-                <button
+                <IconButton
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                     aria-controls="sidebar"
                     aria-expanded={sidebarOpen}
-                    className="p-2 rounded-md"
+                    size="small"
                 >
                     <BiMenu />
-                </button>
+                </IconButton>
 
                 <Link to="/" className="flex items-center gap-2 font-bold text-sm">
                     <img src="/logo.png" alt="PAREE logo" className="w-8 h-8 sm:w-10 sm:h-10 md:w-10 md:h-10 object-contain" loading="lazy" />
@@ -37,7 +38,12 @@ export default function Topbar(props: TopbarProps): JSX.Element {
                 </div>
 
                 {/* TODO trocar para /profile depois */}
-                <Link to="/profile" title={`Ir para o perfil de ${userName}`} className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent flex items-center justify-center cursor-pointer" style={{ minWidth: 40, minHeight: 40 }}>
+                <IconButton
+                    component={Link}
+                    to="/profile"
+                    title={`Ir para o perfil de ${userName}`}
+                    sx={{ p: 0, width: 40, height: 40, borderRadius: "50%", overflow: "hidden", border: "2px solid transparent" }}
+                >
                     {avatarUrl ? (
                         <img src={avatarUrl} alt={`${userName} avatar`} className="w-full h-full object-cover" />
                     ) : (
@@ -50,7 +56,7 @@ export default function Topbar(props: TopbarProps): JSX.Element {
                                 .toUpperCase()}
                         </div>
                     )}
-                </Link>
+                </IconButton>
             </div>
         </header>
     ); 
