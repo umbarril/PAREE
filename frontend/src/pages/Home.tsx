@@ -1,46 +1,28 @@
-import { useEffect, useState, type JSX } from "react";
+import { type JSX } from "react";
 import { useNavigate } from "react-router";
 import Base from "../components/Base";
-import type { TurmaResponse } from "../types/StudentClassesResponse";
 import { fetchClasses } from "../services/ClassesService";
 import { generateVibrantColor } from "../ThemeHelper";
 import { useAuthStore } from "../store/AuthStore";
+import { useQuery } from "@tanstack/react-query";
 
 // todo: adicionar temas
 export default function Home(): JSX.Element {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [classes, setClasses] = useState<TurmaResponse[]>([]);
-
     const { user } = useAuthStore();
+
     const navigate = useNavigate();
-
-    useEffect(() => {
-        async function run() {
-            if (user === null) {
-                setLoading(false);
-                setError("Usuário não autenticado. Por favor, faça login.");
-                return;
-            }
-            if (user.matricula === null || user.matricula === "") {
-                setLoading(false);
-                console.log("Matricula está vazia, pulando fetch de turmas.");
-                return;
-            }
-            try {
-                setLoading(true);
-                const { data: classes } = await fetchClasses(user.matricula);
-                setClasses(classes);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Um erro ocorreu ao carregar suas turmas.");
-            } finally {
-                setLoading(false);
-            }
-        }
-        run();
-    }, [user]);
-
     const goToClass = (id: string) => navigate(`/class/${id}`);
+
+    const { data: classes = [], isLoading, error } = useQuery({
+        queryKey: ['classes', user?.matricula],
+        queryFn: async () => {
+            if (!user) throw new Error("Usuário não autenticado. Por favor, faça login.");
+            if (!user.matricula) throw new Error("Matrícula do usuário não encontrada. Por favor, verifique suas informações de perfil.");
+            const { data } = await fetchClasses(user.matricula);
+            return data;
+        },
+    })
+
     return (
         <Base>
             <div className="flex-1 flex flex-col">
@@ -54,11 +36,11 @@ export default function Home(): JSX.Element {
                     {/* todo: melhorar aparência e por botão para recarregar */}
                     {error && (
                         <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
-                            {error}
+                           Um erro ocorreu ao carregar suas turmas. 
                         </div>
                     )}
 
-                    {loading ? (
+                    {isLoading ? (
                         <>
                             <svg className="w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
