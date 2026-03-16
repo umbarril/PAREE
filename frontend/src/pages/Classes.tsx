@@ -1,22 +1,23 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import Base from "../components/Base";
 import { useParams, useNavigate, useLocation } from "react-router";
-import { fetchClassCoursePlan, fetchClassMissesAndGrades, fetchClassNews, fetchClassProfessors, fetchClassStudents } from "../services/ClassesService";
+import { fetchClassCoursePlan, fetchClassFrequency, fetchClassMissesAndGrades, fetchClassNews, fetchClassProfessors, fetchClassStudents } from "../services/ClassesService";
 import type { NewsPieceResponse } from "../types/NewsResponse";
 import { useAuthStore } from "../store/AuthStore";
 import DOMPurify from "dompurify";
-import type { Arquivo, CoursePlanResponse, LessonTopic } from "../types/CoursePlanResponse";
+import type { Arquivo, CoursePlanResponse } from "../types/CoursePlanResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
 import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress } from "@mui/material";
 import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend } from "react-icons/bi";
+import { useQuery } from "@tanstack/react-query";
+import type { FrequencyResponse, FrequencyResponseItem } from "../types/FrequencyResponse";
 
 export default function Classes(): JSX.Element {
   const { id } = useParams();
 
   const user = useAuthStore((store) => store.user);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [menu, setMenu] = useState<number>(0);
 
@@ -37,18 +38,12 @@ export default function Classes(): JSX.Element {
     setMenu(pathToMenu(location.pathname));
   }, [location.pathname]);
 
-  if (user === null) {
-    console.error("User is null");
-    setError("User is null");
-  }
-  if (user?.matricula === null) {
-    console.error("Matricula is undefined");
-    setError("Matricula is undefined");
-  }
-  if (id === undefined) {
-    console.error("Class id is undefined");
-    setError("Class id is undefined");
-  }
+  const error = useMemo(() => {
+    if (user === null) return "User is null";
+    if (user?.matricula === null) return "Matricula is undefined";
+    if (id === undefined) return "Class id is undefined";
+    return null;
+  }, [id, user]);
 
   return (
     <Base>
@@ -95,8 +90,22 @@ export default function Classes(): JSX.Element {
 }
 
 function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
-    const [news, setNews] = useState<NewsPieceResponse[]>([]);
-    const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
+    const {
+      data,
+      isFetching,
+    } = useQuery<{ news: NewsPieceResponse[]; professors: ProfessorResponse[] }>({
+      queryKey: ["class", id, "main"],
+      queryFn: async () => {
+        const [news, professors] = await Promise.all([
+          fetchClassNews(id),
+          fetchClassProfessors(id),
+        ]);
+        return { news, professors };
+      },
+    });
+
+  const news = data?.news ?? [];
+  const professors = data?.professors ?? [];
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [menuEmail, setMenuEmail] = useState<string | null>(null);
 
@@ -117,29 +126,9 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
     handleMenuClose();
   };
 
-    useEffect(() => { 
-      let mounted = true;
-      console.log("Fetching class news for class id:", id);
-      async function run() {
-        setLoading(true);
-        try {
-          const [newsDetails, profDetails] = await Promise.all([
-            fetchClassNews(id!),
-            fetchClassProfessors(id!),
-          ]);
-          if (!mounted) return;
-          console.log(newsDetails, profDetails);
-          setNews(newsDetails);
-          setProfessors(profDetails);
-        } catch (e) {
-          console.error("Error fetching class data:", e);
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      }
-      run();
-      return () => { mounted = false; };
-    }, [id]);
+    useEffect(() => {
+      setLoading(isFetching);
+    }, [isFetching, setLoading]);
 
     return (
         <>
@@ -158,7 +147,7 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
               const shortDate = fullTimestamp.split(' ')[0] ?? fullTimestamp;
 
               return (
-                <Grid key={n.idTurma} sx={{ display: 'flex', justifyContent: 'center', width: 'auto' }}>
+                <Grid sx={{ display: 'flex', justifyContent: 'center', width: 'auto' }}>
                   <Card sx={{ width: { xs: '100%', sm: 520, md: 640 }, display: 'flex', flexDirection: 'column', flex: '0 0 auto', minHeight: 240 }}>
                     <CardHeader sx={{ pb: 0.5 }}
                       avatar={
@@ -192,25 +181,14 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
 }
 
 function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
-    const [coursePlan, setCoursePlan] = useState<CoursePlanResponse>();
+    const { data: coursePlan, isFetching } = useQuery<CoursePlanResponse>({
+      queryKey: ["class", id, "course-plan"],
+      queryFn: () => fetchClassCoursePlan(id),
+    });
 
     useEffect(() => {
-      let mounted = true;
-      async function run() {
-        setLoading(true);
-        try {
-          const details = await fetchClassCoursePlan(id!);
-          if (!mounted) return;
-          setCoursePlan(details);
-        } catch (e) {
-          console.error("Error fetching course plan:", e);
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      }
-      run();
-      return () => { mounted = false; };
-    }, [id]);
+      setLoading(isFetching);
+    }, [isFetching, setLoading]);
 
     if (!coursePlan) {
       return (
@@ -277,32 +255,32 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
             </Box>
 
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2">Objetivos</Typography>
                 <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.objetivos || '') }} />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2">Conteúdo</Typography>
                 <Box sx={{ color: 'text.secondary', mt: 0.5, maxHeight: 140, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.conteudo || '') }} />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2">Procedimento de Avaliação</Typography>
                 <Typography variant="body2" color="text.secondary">{String(coursePlan.procedimentoAvaliacaoAprendizagem ?? '—')}</Typography>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2">Horário de Atendimento</Typography>
                 <Typography variant="body2" color="text.secondary">{coursePlan.horarioAtendimento ?? '—'}</Typography>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2">Competências / Habilidades</Typography>
                 <Box sx={{ color: 'text.secondary' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.habilidadesCompetencias || '') }} />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2">Exame Final / Reposição</Typography>
                 <Typography variant="body2" color="text.secondary">Exame: {coursePlan.exameFinal ?? '—'}</Typography>
                 <Typography variant="body2" color="text.secondary">Hora exame: {coursePlan.horaExameFinal ?? '—'}</Typography>
@@ -415,32 +393,23 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 }
 
 function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading: boolean) => void }): JSX.Element {
-    const [students, setStudents] = useState<StudentResponse[]>();
-    const [professors, setProfessors] = useState<ProfessorResponse[]>([]);
+    const { data, isFetching } = useQuery<{ students: StudentResponse[]; professors: ProfessorResponse[] }>({
+      queryKey: ["class", id, "participants"],
+      queryFn: async () => {
+        const [students, professors] = await Promise.all([
+          fetchClassStudents(id),
+          fetchClassProfessors(id),
+        ]);
+        return { students, professors };
+      },
+    });
+
+    const students = data?.students;
+    const professors = data?.professors ?? [];
 
     useEffect(() => {
-      let mounted = true;
-      console.log("Fetching class course plan for class id:", id);
-      async function run() {
-        setLoading(true);
-        try {
-          const [studentsDetails, profDetails] = await Promise.all([
-            fetchClassStudents(id!),
-            fetchClassProfessors(id!),
-          ]);
-          if (!mounted) return;
-          console.log(studentsDetails, profDetails);
-          setStudents(studentsDetails);
-          setProfessors(profDetails);
-        } catch (e) {
-          console.error("Error fetching participants:", e);
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      }
-      run();
-      return () => { mounted = false; };
-    }, [id]);
+      setLoading(isFetching);
+    }, [isFetching, setLoading]);
     
     return (
       <Container maxWidth="md">
@@ -547,27 +516,38 @@ function ParticipantsMenu({ id, setLoading }: { id: string; setLoading: (loading
 
 
 function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: string; setLoading: (loading: boolean) => void }): JSX.Element {
-    const [gradesAndMisses, setGradesAndMisses] = useState<MissesAndGradesResponse>();
+    const { data: gradesAndMisses, isFetching } = useQuery<MissesAndGradesResponse>({
+      queryKey: ["class", id, "grades-misses", matricula],
+      enabled: Boolean(matricula),
+      queryFn: () => {
+        const result = fetchClassMissesAndGrades(matricula, id)
+        console.log("Fetched grades and misses:", result);
+        return result;
+      }
+    });
+
+    const { data: frequencyData = [] } = useQuery<FrequencyResponse>({
+      queryKey: ["class", id, "frequency", matricula],
+      enabled: Boolean(matricula),
+      queryFn: () => {
+        const result = fetchClassFrequency(matricula, id)
+        console.log("Fetched frequency:", result);
+        return result;
+      } 
+    });
 
     useEffect(() => {
-      let mounted = true;
-      console.log("Fetching class course plan for class id:", id);
-      async function run() {
-        setLoading(true);
-        try {
-          const details = await fetchClassMissesAndGrades(matricula, id!);
-          if (!mounted) return;
-          console.log(details);
-          setGradesAndMisses(details);
-        } catch (e) {
-          console.error("Error fetching grades/misses:", e);
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      }
-      run();
-      return () => { mounted = false; };
-    }, [id]);
+      setLoading(isFetching);
+    }, [isFetching, setLoading]);
+
+    if (gradesAndMisses === undefined) {
+      return (
+        <Container maxWidth="lg">
+          <Typography variant="h5" sx={{ mb: 2 }}>Mapa de Frequências & Notas</Typography>
+          <Typography variant="body2" color="text.secondary">Informações de notas e frequências não disponíveis.</Typography>
+        </Container>
+      );
+    }
 
     // Render two tables: Grades (notasPorUnidade) and Misses/Attendance (if detailed data exists show rows, otherwise show summary)
     return (
@@ -575,7 +555,7 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
         <Typography variant="h5" sx={{ mb: 2 }}>Mapa de Frequências & Notas</Typography>
 
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="h6">Notas por Unidade</Typography>
             <TableContainer component={Paper} sx={{ mt: 1 }}>
               <Table size="small">
@@ -586,17 +566,17 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(gradesAndMisses?.notasPorUnidade ?? []).map((n, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{n.unidade}</TableCell>
-                      <TableCell>{n.nota}</TableCell>
+                  {Object.entries(gradesAndMisses.notasPorUnidade).map(([unidade, nota]) => (
+                    <TableRow key={unidade}>
+                      <TableCell>{unidade}</TableCell>
+                      <TableCell>{nota}</TableCell>
                     </TableRow>
                   ))}
-                  {(!gradesAndMisses || (gradesAndMisses.notasPorUnidade ?? []).length === 0) && (
+                  {/* {(!gradesAndMisses || Object.values(gradesAndMisses.notasPorUnidade).filter((v): v is string => !!v).length === 0) && (
                     <TableRow>
                       <TableCell colSpan={2} sx={{ color: 'text.secondary' }}>Nenhuma nota disponível.</TableCell>
                     </TableRow>
-                  )}
+                  )} */}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -607,36 +587,31 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="h6">Mapa de Frequências</Typography>
-            {/* If detailed attendance rows are present render them; otherwise show summary */}
             <TableContainer component={Paper} sx={{ mt: 1 }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>Data</TableCell>
-                    <TableCell>Situação</TableCell>
-                    <TableCell>Falta justificada?</TableCell>
+                    <TableCell>Faltas</TableCell>
+                    <TableCell>Horários</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {/* Some backends may provide a detailed list under gradesAndMisses.faltasDetalhadas or similar. Try to render if present. */}
-                  {((gradesAndMisses as any)?.faltasDetalhadas ?? []).map((r: any, i: number) => (
+                  {frequencyData.map((r: FrequencyResponseItem, i: number) => (
                     <TableRow key={i}>
-                      <TableCell>{r.data ?? r.dataFalta ?? ''}</TableCell>
-                      <TableCell>{r.situacao ?? ''}</TableCell>
-                      <TableCell>{r.justificada ? 'Sim' : (r.justificada === false ? 'Não' : '')}</TableCell>
+                      <TableCell>{r.data}</TableCell>
+                      <TableCell>{r.qtdFaltas ?? ''}</TableCell>
+                      <TableCell>{r.qtdHorarios ?? ''}</TableCell>
                     </TableRow>
                   ))}
 
-                  {/* If no detailed rows, show a placeholder row with totals if available */}
-                  {(!((gradesAndMisses as any)?.faltasDetalhadas) || ((gradesAndMisses as any)?.faltasDetalhadas.length === 0)) && (
+                  {gradesAndMisses && (
                     <TableRow>
                       <TableCell colSpan={3}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          <Typography variant="body2">Total de Faltas: <strong>{gradesAndMisses?.numeroDeFaltas ?? '—'}</strong></Typography>
-                          <Typography variant="body2">Total de Faltas Justificadas: <strong>{(gradesAndMisses as any)?.numeroDeFaltasJustificadas ?? '—'}</strong></Typography>
-                          <Typography variant="body2">Máximo de Faltas Permitido: <strong>{(gradesAndMisses as any)?.maximoFaltasPermitido ?? '—'}</strong></Typography>
+                          <Typography variant="body2">Total de Faltas: <strong>{gradesAndMisses.numeroDeFaltas ?? '—'}</strong></Typography>
                         </Box>
                       </TableCell>
                     </TableRow>

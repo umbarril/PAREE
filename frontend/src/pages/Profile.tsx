@@ -1,42 +1,28 @@
-import { useEffect, useState, type JSX } from "react";
+import { type JSX } from "react";
 import Base from "../components/Base";
 import { useAuthStore } from "../store/AuthStore";
 import { fetchUsuario, fetchVinculo } from "../services/PersonalService";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Profile(): JSX.Element {
     const { user, logout } = useAuthStore();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [personal, setPersonal] = useState<any>(null);
-    const [vinculos, setVinculos] = useState<any[]>([]);
 
-    useEffect(() => {
-        let mounted = true;
-        setLoading(true);
-        setError(null);
+    const { data, isLoading, error } = useQuery<{ personal: any; vinculos: any[] }>({
+        queryKey: ["profile", "personal"],
+        queryFn: async () => {
+            const [u, v] = await Promise.all([fetchUsuario(), fetchVinculo()]);
+            const personal = (u.data ?? u) as any;
+            const vinculosData = v?.data?.discente ?? [];
 
-        async function load() {
-            try {
-                const u = await fetchUsuario();
-                if (!mounted) return;
-                setPersonal(u.data ?? u);
+            return {
+                personal,
+                vinculos: Array.isArray(vinculosData) ? vinculosData : [],
+            };
+        },
+    });
 
-                const v = await fetchVinculo();
-                if (!mounted) return;
-                // API returns { discente: DiscenteVinculoResponse[] }
-                const data = v?.data?.discente ?? [];
-                setVinculos(Array.isArray(data) ? data : []);
-            } catch (err: any) {
-                console.error("Failed to load personal data", err);
-                setError(String(err?.message ?? err));
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        }
-
-        load();
-        return () => { mounted = false; };
-    }, []);
+    const personal = data?.personal ?? null;
+    const vinculos = data?.vinculos ?? [];
 
     return (
         <Base>
@@ -54,10 +40,10 @@ export default function Profile(): JSX.Element {
 
                     <div className="mt-6">
                         <h3 className="text-lg font-medium">Vínculos</h3>
-                        {loading && <p className="text-sm text-gray-500">Carregando...</p>}
-                        {error && <div className="mt-2 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
+                        {isLoading && <p className="text-sm text-gray-500">Carregando...</p>}
+                        {error && <div className="mt-2 p-2 bg-red-100 text-red-700 rounded">{String((error as Error)?.message ?? error)}</div>}
 
-                        {!loading && vinculos.length === 0 && <p className="text-sm text-gray-500">Nenhum vínculo listado.</p>}
+                        {!isLoading && vinculos.length === 0 && <p className="text-sm text-gray-500">Nenhum vínculo listado.</p>}
 
                         <ul className="mt-2 space-y-2">
                             {vinculos.map((v, i) => (

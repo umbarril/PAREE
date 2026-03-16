@@ -1,11 +1,11 @@
 import type { JSX } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Base from "../components/Base";
 import { useAuthStore } from "../store/AuthStore";
 import { fetchClasses, fetchClassCoursePlan } from "../services/ClassesService";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
-import type { CoursePlanResponse } from "../types/CoursePlanResponse";
 import { Box, Button, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 
 function mapDayToIndex(d?: string | null): number | null {
     if (!d) return null;
@@ -34,55 +34,42 @@ function parseTimeToMinutes(t?: string | null): number | null {
 
 export default function Calendar(): JSX.Element {
     const user = useAuthStore((s) => s.user);
-    const [classes, setClasses] = useState<TurmaResponse[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [showEvaluations, setShowEvaluations] = useState(false);
-    const [evaluations, setEvaluations] = useState<Array<{ turmaName: string; avaliacoes: any[]; }>>([]);
 
-    useEffect(() => {
-        if (!user?.matricula) return;
-        let mounted = true;
-        setLoading(true);
-        setError(null);
-        fetchClasses(user.matricula)
-            .then((res) => {
-                const data = (res as any).data ?? res;
-                if (!mounted) return;
-                setClasses(Array.isArray(data) ? data : []);
-            })
-            .catch((err) => {
-                console.error("Failed to fetch classes", err);
-                if (!mounted) return;
-                setError(String(err?.message ?? err));
-            })
-            .finally(() => { if (mounted) setLoading(false); });
+    const {
+        data: classes = [],
+        isLoading,
+        error,
+    } = useQuery<TurmaResponse[]>({
+        queryKey: ["calendar", "classes", user?.matricula],
+        enabled: Boolean(user?.matricula),
+        queryFn: async () => {
+            if (!user?.matricula) return [];
+            const res = await fetchClasses(user.matricula);
+            const data = (res as any).data ?? res;
+            return Array.isArray(data) ? data : [];
+        },
+    });
 
-        return () => { mounted = false; };
-    }, [user?.matricula]);
+    const { data: evaluations = [] } = useQuery<Array<{ turmaName: string; avaliacoes: any[] }>>({
+        queryKey: ["calendar", "evaluations", classes.map((t) => t.idTurma).join(",")],
+        enabled: showEvaluations && classes.length > 0,
+        queryFn: async () => {
+            const settled = await Promise.allSettled(
+                classes.map(async (t) => {
+                    const cp = await fetchClassCoursePlan(String(t.idTurma));
+                    return {
+                        turmaName: t.nome,
+                        avaliacoes: (cp.avaliacoes ?? []).map((a) => ({ ...a, turma: t.nome })),
+                    };
+                }),
+            );
 
-    // fetch evaluations on demand to avoid many requests by default
-    useEffect(() => {
-        if (!showEvaluations) return;
-        if (classes.length === 0) return;
-
-        let mounted = true;
-        (async () => {
-            const results: Array<{ turmaName: string; avaliacoes: any[] }> = [];
-            for (const t of classes) {
-                try {
-                    const cp: CoursePlanResponse = await fetchClassCoursePlan(String(t.idTurma));
-                    if (!mounted) break;
-                    results.push({ turmaName: t.nome, avaliacoes: (cp.avaliacoes ?? []).map(a => ({ ...a, turma: t.nome })) });
-                } catch (err) {
-                    console.warn("Failed to fetch course plan for", t.idTurma, err);
-                }
-            }
-            if (mounted) setEvaluations(results);
-        })();
-
-        return () => { mounted = false; };
-    }, [showEvaluations, classes]);
+            return settled
+                .filter((item): item is PromiseFulfilledResult<{ turmaName: string; avaliacoes: any[] }> => item.status === "fulfilled")
+                .map((item) => item.value);
+        },
+    });
 
     // prepare events from class schedules
     const events = useMemo(() => {
@@ -119,6 +106,16 @@ export default function Calendar(): JSX.Element {
                             <Button variant="outlined" onClick={handleGoogleSync}>Sincronizar com Google Calendar</Button>
                         </div>
                     </div>
+
+                    {error && (
+                        <div className="mt-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
+                            Um erro ocorreu ao carregar as turmas: {String((error as Error)?.message ?? error)}
+                        </div>
+                    )}
+
+                    {isLoading && (
+                        <div className="mt-4 text-sm text-gray-500">Carregando turmas...</div>
+                    )}
 
                     <div className="mt-4">
                         <div style={{ border: '1px solid rgba(0,0,0,0.06)', background: '#f3f4f6', minHeight: 520, display: 'flex', overflow: 'auto' }}>

@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import { type JSX } from "react";
 import Base from "../components/Base";
 import { Box, Paper, Typography, Button } from "@mui/material";
 import { BiWrench } from "react-icons/bi";
