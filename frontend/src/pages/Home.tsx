@@ -9,6 +9,7 @@ import type { Avaliacao, CoursePlanResponse } from "../types/CoursePlanResponse"
 import type { NewsPieceResponse } from "../types/NewsResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
+import { Box, LinearProgress } from "@mui/material";
 
 type ClassPreviewData = {
     news: NewsPieceResponse[];
@@ -109,6 +110,7 @@ function buildProfessorLine(
 
     const full = raw.join(", ");
     const visible = raw.slice(0, 3);
+
     // char budget per name shrinks as more names are shown
     const perName = [28, 15, 9][Math.min(visible.length - 1, 2)];
     const line = visible
@@ -271,6 +273,9 @@ export default function Home(): JSX.Element {
 
     return (
         <Base>
+            <Box sx={{ width: '100%' }}>
+                {isFetchingClasses && <LinearProgress />}
+            </Box>
             <div className="flex-1 flex flex-col">
                 <main className="p-6 overflow-auto">
                     {error && (
