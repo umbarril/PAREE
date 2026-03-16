@@ -18,14 +18,6 @@ import {
     Typography,
 } from "@mui/material";
 
-function normalizeIsbn(value: string): string | null {
-    const digits = value.replace(/[^0-9Xx]/g, "").toUpperCase();
-    if (digits.length === 10 || digits.length === 13) {
-        return digits;
-    }
-    return null;
-}
-
 function parseApiDate(value: string): string {
     if (!value) return "Não informado";
 
@@ -43,8 +35,39 @@ function parseApiDate(value: string): string {
     return value;
 }
 
-function buildCoverUrlFromOpenLibrary(isbn: string): string {
-    return `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`;
+function buildCoverUrlFromOpenLibrary(coverId: number): string {
+    return `https://covers.openlibrary.org/b/id/${coverId}-M.jpg?default=false`;
+}
+
+type OpenLibrarySearchResponse = {
+    docs?: Array<{
+        title?: string;
+        cover_i?: number;
+    }>;
+};
+
+async function fetchCoverByTitle(title: string): Promise<string | null> {
+    const params = new URLSearchParams({
+        title,
+        limit: "10",
+        language: "por",
+    });
+
+    const response = await fetch(`https://openlibrary.org/search.json?${params.toString()}`);
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as OpenLibrarySearchResponse;
+    const normalizedTitle = title.trim().toLowerCase();
+
+    const bestMatch =
+        data.docs?.find((doc) => {
+            if (!doc.cover_i || !doc.title) return false;
+            return doc.title.trim().toLowerCase() === normalizedTitle;
+        }) ?? data.docs?.find((doc) => Boolean(doc.cover_i));
+
+    if (!bestMatch?.cover_i) return null;
+
+    return buildCoverUrlFromOpenLibrary(bestMatch.cover_i);
 }
 
 function BookCover({ src, title }: { src: string | null; title: string }): JSX.Element {
@@ -110,17 +133,12 @@ export default function Library(): JSX.Element {
     const coverQueries = useQueries({
         queries:
             borrowedBooks?.map((book) => {
-                const isbn = normalizeIsbn(book.codigoBarras);
+                const title = book.titulo?.trim() ?? "";
                 return {
-                    queryKey: ["bookCover", isbn],
-                    enabled: Boolean(isbn),
-                    queryFn: async () => {
-                        if (!isbn) return null;
-                        const url = buildCoverUrlFromOpenLibrary(isbn);
-                        const response = await fetch(url, { method: "HEAD" });
-                        return response.ok ? url : null;
-                    },
-                    staleTime: 1000 * 60 * 60 * 24,
+                    queryKey: ["bookCover", title],
+                    enabled: Boolean(title),
+                    queryFn: () => fetchCoverByTitle(title),
+                    staleTime: 1000 * 60 * 60 * 24, // 24h
                     retry: 1,
                 };
             }) ?? [],
