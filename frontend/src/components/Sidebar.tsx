@@ -11,7 +11,7 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
 
   const nav = (
     <nav
-      className={`flex flex-col gap-2 transition-opacity duration-200 ${
+      className={`flex flex-col gap-2 flex-1 transition-opacity duration-200 ${
         sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
       aria-label="Navegação principal"
@@ -30,7 +30,7 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
         Início
       </NavLink>
 
-      <NavLink
+      {/* <NavLink
         to="/library"
         className={({ isActive }) =>
           `${navItemBase} ${isActive ? navItemActive : navItemInactive}`
@@ -40,7 +40,7 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
           <BiLibrary />
         </span>
         Biblioteca
-      </NavLink>
+      </NavLink> */}
 
       <NavLink
         to="/calendar"
