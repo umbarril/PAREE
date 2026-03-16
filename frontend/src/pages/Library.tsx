@@ -216,7 +216,7 @@ export default function Library(): JSX.Element {
                 )}
 
                 {!isLoading && !error && borrowedBooks?.length === 0 && (
-                    <Alert severity="info">Você não tem livros emrpestados!</Alert>
+                    <Alert severity="info">Você não tem livros emprestados!</Alert>
                 )}
 
                 {!isLoading && !error && borrowedBooks && borrowedBooks.length > 0 && (
