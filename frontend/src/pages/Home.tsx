@@ -96,7 +96,6 @@ function toDisplayName(name: string): string {
         .join(" ");
 }
 
-// Returns a display line (evenly truncated per-name) and the full label for the title tooltip.
 function buildProfessorLine(
     professors: ProfessorResponse[],
     docentesFallback?: string[] | null,
@@ -151,7 +150,6 @@ function ClassCard({
                 if (e.key === "Enter" || e.key === " ") onOpen();
             }}
         >
-            {/* Fixed-height colored header */}
             <div className="relative h-32 p-4" style={{ background: generateVibrantColor(turma.nome) }}>
                 <div className="min-w-0">
                     <h3
@@ -195,9 +193,7 @@ function ClassCard({
                 </div>
             </div>
 
-            {/* Fixed-height white body */}
             <div className={`p-4 ${bodyPt} flex flex-col`}>
-                {/* News slot — fixed height */}
                 <div className="h-20 overflow-hidden">
                     <div className="flex items-center justify-between gap-2 mb-1">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Ultima noticia</p>
@@ -214,7 +210,6 @@ function ClassCard({
                     )}
                 </div>
 
-                {/* Evaluation slot — always rendered so all cards share same height */}
                 <div className="h-14 overflow-hidden border-t border-slate-200 pt-2">
                     {nextEvaluation && (
                         <>
@@ -229,7 +224,6 @@ function ClassCard({
                     )}
                 </div>
 
-                {/* Footer */}
                 <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-sm text-slate-700">
                     <span className="font-medium">Ver →</span>
                 </div>
@@ -255,25 +249,25 @@ export default function Home(): JSX.Element {
         },
     })
 
-        const classPreviewQueries = useQueries({
-                queries: classes.map((c) => ({
-                        queryKey: ["class", c.idTurma, "home-preview"],
-                        queryFn: async (): Promise<ClassPreviewData> => {
-                                const [newsResult, professorsResult, coursePlanResult] = await Promise.allSettled([
-                                        fetchClassNews(String(c.idTurma)),
-                                        fetchClassProfessors(String(c.idTurma)),
-                                        fetchClassCoursePlan(String(c.idTurma)),
-                                ]);
+    const classPreviewQueries = useQueries({
+        queries: classes.map((c) => ({
+            queryKey: ["class", c.idTurma, "home-preview"],
+            queryFn: async (): Promise<ClassPreviewData> => {
+                const [newsResult, professorsResult, coursePlanResult] = await Promise.allSettled([
+                    fetchClassNews(String(c.idTurma)),
+                    fetchClassProfessors(String(c.idTurma)),
+                    fetchClassCoursePlan(String(c.idTurma)),
+                ]);
 
-                                return {
-                                        news: newsResult.status === "fulfilled" ? newsResult.value : [],
-                                        professors: professorsResult.status === "fulfilled" ? professorsResult.value : [],
-                                        coursePlan: coursePlanResult.status === "fulfilled" ? coursePlanResult.value : null,
-                                };
-                        },
-                        staleTime: 1000 * 60 * 3,
-                })),
-        });
+                return {
+                    news: newsResult.status === "fulfilled" ? newsResult.value : [],
+                    professors: professorsResult.status === "fulfilled" ? professorsResult.value : [],
+                    coursePlan: coursePlanResult.status === "fulfilled" ? coursePlanResult.value : null,
+                };
+            },
+            staleTime: 1000 * 60 * 3,
+        })),
+    });
 
     return (
         <Base>
