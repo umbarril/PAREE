@@ -104,12 +104,12 @@ func refreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	data.Set("client_id", "sigaa-discente-mobile")
 
 	resp, err := http.PostForm("https:/sistemas.ufpb.br/auth-server/oauth/token", data)
-	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println("Error refreshing token:", err.Error())
 		http.Error(w, "SIGAA Unreachable", 500)
 		return
 	}
+	defer resp.Body.Close()
 
 	// Parse the response body to extract new access_token
 	var tokenResponse map[string]interface{}
