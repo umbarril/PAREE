@@ -1,7 +1,7 @@
 import Button from "@mui/material/Button";
 import type { JSX, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { BiBookBookmark, BiCalendar, BiChevronDown, BiChevronUp, BiClipboard, BiHome, BiLogOut, BiX } from "react-icons/bi";
+import { BiBookBookmark, BiCalendar, BiChevronDown, BiChevronUp, BiClipboard, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
 import { NavLink } from "react-router";
 import { generateVibrantColor } from "../ThemeHelper";
 import { useStudentClasses } from "../hooks/useStudentClasses";
@@ -126,10 +126,10 @@ export default function Sidebar(props: { sidebarOpen: boolean; setSidebarOpen?: 
         Início
       </NavButton>
 
-      {/* <NavButton to="/library">
+      <NavButton to="/library">
         <BiLibrary />
         Biblioteca
-      </NavButton> */}
+      </NavButton>
 
       <NavButton to="/calendar">
         <BiCalendar />
