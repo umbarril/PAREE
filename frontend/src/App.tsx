@@ -14,7 +14,6 @@ import { useEffect } from 'react'
 import { ProtectedRoute } from './pages/ProtectedRoute.tsx'
 import { Documents } from './pages/Documents.tsx'
 
-// todo: ouvir com  o wireshark como as requisicoes estao sendo feitas
 const router = createBrowserRouter([
   { path: '/', element: (<ProtectedRoute><Home /></ProtectedRoute>) },
   { path: '/profile', element: (<ProtectedRoute><Profile /></ProtectedRoute>) },
