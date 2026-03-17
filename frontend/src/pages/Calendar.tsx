@@ -4,7 +4,25 @@ import Base from "../components/Base";
 import { useAuthStore } from "../store/AuthStore";
 import { fetchClasses, fetchClassCoursePlan } from "../services/ClassesService";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
-import { Box, Button, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
+import interactionPlugin from "@fullcalendar/interaction";
+import ptBrLocale from "@fullcalendar/core/locales/pt-br";
+import type { EventInput } from "@fullcalendar/core";
+import {
+    Alert,
+    Box,
+    Button,
+    Checkbox,
+    CircularProgress,
+    FormControlLabel,
+    Stack,
+    Typography,
+    useMediaQuery,
+    useTheme,
+} from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 
 function mapDayToIndex(d?: string | null): number | null {
@@ -32,14 +50,41 @@ function parseTimeToMinutes(t?: string | null): number | null {
     return hh * 60 + mm;
 }
 
+function minutesToTimeString(minutes: number): string {
+    const hh = Math.floor(minutes / 60);
+    const mm = minutes % 60;
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:00`;
+}
+
+interface EvaluationItem {
+    dataRealizacao?: string | null;
+    descricao?: string | null;
+}
+
+interface EvaluationGroup {
+    turmaName: string;
+    avaliacoes: EvaluationItem[];
+}
+
+interface EvaluationResult {
+    groups: EvaluationGroup[];
+    failedCount: number;
+}
+
+const CalendarComponent = FullCalendar as unknown as (props: Record<string, unknown>) => JSX.Element;
+
 export default function Calendar(): JSX.Element {
     const user = useAuthStore((s) => s.user);
     const [showEvaluations, setShowEvaluations] = useState(false);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
     const {
         data: classes = [],
         isLoading,
-        error,
+        isError: isClassesError,
+        error: classesError,
+        refetch: refetchClasses,
     } = useQuery<TurmaResponse[]>({
         queryKey: ["calendar", "classes", user?.matricula],
         enabled: Boolean(user?.matricula),
@@ -51,7 +96,13 @@ export default function Calendar(): JSX.Element {
         },
     });
 
-    const { data: evaluations = [] } = useQuery<Array<{ turmaName: string; avaliacoes: any[] }>>({
+    const {
+        data: evaluationsData,
+        isLoading: isEvaluationsLoading,
+        isError: isEvaluationsError,
+        error: evaluationsError,
+        refetch: refetchEvaluations,
+    } = useQuery<EvaluationResult>({
         queryKey: ["calendar", "evaluations", classes.map((t) => t.idTurma).join(",")],
         enabled: showEvaluations && classes.length > 0,
         queryFn: async () => {
@@ -60,125 +111,268 @@ export default function Calendar(): JSX.Element {
                     const cp = await fetchClassCoursePlan(String(t.idTurma));
                     return {
                         turmaName: t.nome,
-                        avaliacoes: (cp.avaliacoes ?? []).map((a) => ({ ...a, turma: t.nome })),
+                        avaliacoes: (cp.avaliacoes ?? []).map((a) => ({
+                            dataRealizacao: a.dataRealizacao,
+                            descricao: a.descricao,
+                        })),
                     };
                 }),
             );
 
-            return settled
-                .filter((item): item is PromiseFulfilledResult<{ turmaName: string; avaliacoes: any[] }> => item.status === "fulfilled")
-                .map((item) => item.value);
+            const groups: EvaluationGroup[] = [];
+            let failed = 0;
+
+            settled.forEach((item) => {
+                if (item.status === "fulfilled") {
+                    groups.push(item.value);
+                    return;
+                }
+
+                failed += 1;
+            });
+
+            if (failed > 0 && groups.length === 0) {
+                throw new Error("Nao foi possivel carregar as avaliacoes das turmas.");
+            }
+
+            return {
+                groups,
+                failedCount: failed,
+            };
         },
     });
 
-    // prepare events from class schedules
-    const events = useMemo(() => {
-        const ev: Array<{ title: string; day: number; startMin: number; endMin: number; turma: TurmaResponse }> = [];
+    const events = useMemo<EventInput[]>(() => {
+        const ev: EventInput[] = [];
+
         classes.forEach((t) => {
+            const groupedByDay = new Map<number, Array<{ start: number; end: number }>>();
+
             (t.horarioTurma ?? []).forEach((h) => {
                 const day = mapDayToIndex(h.dia);
                 const start = parseTimeToMinutes(h.horaInicio ?? h.horaInicio);
                 const end = parseTimeToMinutes(h.horaFim ?? h.horaFim);
                 if (day === null || start === null || end === null) return;
-                ev.push({ title: t.nome, day, startMin: start, endMin: end, turma: t });
+
+                const intervals = groupedByDay.get(day) ?? [];
+                intervals.push({ start, end });
+                groupedByDay.set(day, intervals);
+            });
+
+            groupedByDay.forEach((intervals, day) => {
+                const merged = intervals
+                    .sort((a, b) => a.start - b.start)
+                    .reduce<Array<{ start: number; end: number }>>((acc, interval) => {
+                        const last = acc[acc.length - 1];
+                        if (!last) {
+                            acc.push({ ...interval });
+                            return acc;
+                        }
+
+                        if (interval.start <= last.end) {
+                            last.end = Math.max(last.end, interval.end);
+                            return acc;
+                        }
+
+                        acc.push({ ...interval });
+                        return acc;
+                    }, []);
+
+                merged.forEach((interval) => {
+                    ev.push({
+                        id: `class-${t.idTurma}-${day}-${interval.start}`,
+                        title: t.nome,
+                        daysOfWeek: [day === 6 ? 0 : day + 1],
+                        startTime: minutesToTimeString(interval.start),
+                        endTime: minutesToTimeString(interval.end),
+                        display: "block",
+                        color: "#1565c0",
+                        extendedProps: {
+                            kind: "class",
+                            professor: t.docentes?.join(", ") ?? "",
+                            courseCode: t.codigoTurma,
+                        },
+                    });
+                });
             });
         });
-        return ev;
-    }, [classes]);
 
-    const startHour = 7;
-    const endHour = 22;
-    const hourHeight = 56; // px per hour
+        if (showEvaluations && evaluationsData?.groups?.length) {
+            evaluationsData.groups.forEach((group) => {
+                group.avaliacoes.forEach((a, index) => {
+                    const rawDate = a.dataRealizacao;
+                    if (!rawDate) return;
+
+                    const dt = new Date(rawDate);
+                    if (Number.isNaN(dt.getTime())) return;
+
+                    const dateOnly = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+
+                    ev.push({
+                        id: `evaluation-${group.turmaName}-${index}-${dateOnly}`,
+                        title: `${group.turmaName}: ${a.descricao?.trim() || "Avaliacao"}`,
+                        start: dateOnly,
+                        allDay: true,
+                        color: "#d32f2f",
+                        extendedProps: {
+                            kind: "evaluation",
+                        },
+                    });
+                });
+            });
+        }
+
+        return ev;
+    }, [classes, evaluationsData, showEvaluations]);
 
     const handleGoogleSync = () => {
-        // placeholder - real implementation will create events and redirect to Google Calendar OAuth/Import
-        alert('Sincronizar com Google Calendar: funcionalidade em desenvolvimento.');
+        alert("Sincronizar com Google Calendar: funcionalidade em desenvolvimento.");
     };
 
     return (
         <Base>
-            <div className="p-6">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex items-center justify-between">
+            <Box sx={{ px: { xs: 1.5, md: 3 }, py: { xs: 2, md: 3 } }}>
+                <Box sx={{ maxWidth: 1280, mx: "auto" }}>
+                    <Stack
+                        direction={{ xs: "column", md: "row" }}
+                        spacing={1}
+                        justifyContent="space-between"
+                        alignItems={{ xs: "flex-start", md: "center" }}
+                    >
                         <Typography variant="h5">Calendário Acadêmico</Typography>
-                        <div className="flex items-center gap-3">
-                            <FormControlLabel control={<Checkbox checked={showEvaluations} onChange={(e) => setShowEvaluations(e.target.checked)} />} label="Mostrar avaliações" />
-                            <Button variant="outlined" onClick={handleGoogleSync}>Sincronizar com Google Calendar</Button>
-                        </div>
-                    </div>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }}>
+                            <FormControlLabel
+                                control={<Checkbox checked={showEvaluations} onChange={(e) => setShowEvaluations(e.target.checked)} />}
+                                label="Mostrar avaliacoes"
+                            />
+                            <Button variant="outlined" onClick={handleGoogleSync}>
+                                Sincronizar com Google Calendar
+                            </Button>
+                        </Stack>
+                    </Stack>
 
-                    {error && (
-                        <div className="mt-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
-                            Um erro ocorreu ao carregar as turmas: {String((error as Error)?.message ?? error)}
-                        </div>
+                    {!user?.matricula && (
+                        <Alert severity="warning" sx={{ mt: 2 }}>
+                            Nao foi encontrada matricula de usuario para carregar as turmas.
+                        </Alert>
+                    )}
+
+                    {isClassesError && (
+                        <Alert
+                            severity="error"
+                            sx={{ mt: 2 }}
+                            action={
+                                <Button color="inherit" size="small" onClick={() => refetchClasses()}>
+                                    Tentar novamente
+                                </Button>
+                            }
+                        >
+                            Falha ao carregar turmas: {String(classesError instanceof Error ? classesError.message : classesError)}
+                        </Alert>
                     )}
 
                     {isLoading && (
-                        <div className="mt-4 text-sm text-gray-500">Carregando turmas...</div>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2 }}>
+                            <CircularProgress size={18} />
+                            <Typography variant="body2" color="text.secondary">
+                                Carregando turmas...
+                            </Typography>
+                        </Stack>
                     )}
 
-                    <div className="mt-4">
-                        <div style={{ border: '1px solid rgba(0,0,0,0.06)', background: '#f3f4f6', minHeight: 520, display: 'flex', overflow: 'auto' }}>
-                            {/* hours column */}
-                            <div style={{ width: 64, borderRight: '1px solid rgba(0,0,0,0.06)', paddingTop: 8 }}>
-                                {Array.from({ length: endHour - startHour }).map((_, i) => (
-                                    <div key={i} style={{ height: hourHeight, boxSizing: 'border-box', paddingLeft: 6, fontSize: 12, color: '#4b5563' }}>{`${String(startHour + i).padStart(2, '0')}:00`}</div>
-                                ))}
-                            </div>
+                    {showEvaluations && isEvaluationsError && (
+                        <Alert
+                            severity="error"
+                            sx={{ mt: 2 }}
+                            action={
+                                <Button color="inherit" size="small" onClick={() => refetchEvaluations()}>
+                                    Tentar novamente
+                                </Button>
+                            }
+                        >
+                            Falha ao carregar avaliacoes: {String(evaluationsError instanceof Error ? evaluationsError.message : evaluationsError)}
+                        </Alert>
+                    )}
 
-                            {/* days area */}
-                            <div style={{ flex: 1, display: 'flex' }}>
-                                {['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map((dayLabel, idx) => (
-                                    <div key={dayLabel} style={{ flex: 1, borderLeft: '1px solid rgba(0,0,0,0.04)', position: 'relative', minWidth: 120 }}>
-                                        <div style={{ height: 36, padding: 8, borderBottom: '1px solid rgba(0,0,0,0.04)', background: '#fff' }}>
-                                            <strong style={{ fontSize: 13 }}>{dayLabel}</strong>
-                                        </div>
-                                        <div style={{ position: 'relative', minHeight: (endHour - startHour) * hourHeight }}>
-                                            {events.filter(e => e.day === idx).map((e, i) => {
-                                                const top = ((e.startMin / 60) - startHour) * hourHeight;
-                                                const height = ((e.endMin - e.startMin) / 60) * hourHeight;
-                                                const clampedTop = Math.max(0, top);
-                                                const clampedHeight = Math.max(20, height - Math.max(0, 0 - top));
-                                                return (
-                                                    <div key={i} title={`${e.title} ${Math.floor(e.startMin/60)}:${String(e.startMin%60).padStart(2,'0')}-${Math.floor(e.endMin/60)}:${String(e.endMin%60).padStart(2,'0')}`} style={{ position: 'absolute', left: 6, right: 6, top: clampedTop, height: clampedHeight, background: '#2563eb', color: '#fff', borderRadius: 6, padding: '6px 8px', fontSize: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-                                                        <div style={{ fontWeight: 600 }}>{e.title}</div>
-                                                        <div style={{ fontSize: 11, opacity: 0.9 }}>{`${String(Math.floor(e.startMin/60)).padStart(2,'0')}:${String(e.startMin%60).padStart(2,'0')} — ${String(Math.floor(e.endMin/60)).padStart(2,'0')}:${String(e.endMin%60).padStart(2,'0')}`}</div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {/* small markers for evaluations on this day */}
-                                            {showEvaluations && evaluations.flatMap(r => r.avaliacoes.map(a => ({ turma: r.turmaName, data: a.dataRealizacao }))).filter(ev => {
-                                                if (!ev.data) return false;
-                                                const dt = new Date(ev.data);
-                                                if (isNaN(dt.getTime())) return false;
-                                                return dt.getDay() === ((idx + 1) % 7); // JS: 0=Sunday, so Monday=1 -> idx 0 -> 1
-                                            }).map((ev, i) => (
-                                                <div key={`eval-${idx}-${i}`} style={{ position: 'absolute', right: 6, top: 8 + i * 20, background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>{ev.turma}</div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    {showEvaluations && !isEvaluationsError && (evaluationsData?.failedCount ?? 0) > 0 && (
+                        <Alert severity="warning" sx={{ mt: 2 }}>
+                            Algumas turmas nao tiveram avaliacoes carregadas. Exibindo os dados disponiveis.
+                        </Alert>
+                    )}
 
-                        <div className="mt-4">
-                            <Typography variant="h6">Avaliações</Typography>
-                            {!showEvaluations && <Typography variant="body2" color="textSecondary">Ative "Mostrar avaliações" para carregar e exibir as avaliações.</Typography>}
-                            {showEvaluations && evaluations.length === 0 && <Typography variant="body2" color="textSecondary">Nenhuma avaliação encontrada.</Typography>}
-                            {showEvaluations && evaluations.map((r, i) => (
-                                <Box key={i} sx={{ mt: 1, p: 1, background: '#fff', borderRadius: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                                    <Typography variant="subtitle2">{r.turmaName}</Typography>
-                                    <ul>
-                                        {r.avaliacoes.map((a, j) => (
-                                            <li key={j}>{a.dataRealizacao ?? a.data ?? '—'} — {a.descricao ?? a.descricao ?? 'Avaliação'}</li>
-                                        ))}
-                                    </ul>
-                                </Box>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    <Box
+                        sx={{
+                            mt: 2,
+                            borderRadius: 2,
+                            overflow: "hidden",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            backgroundColor: "#fff",
+                            "& .fc": {
+                                fontSize: { xs: "0.85rem", md: "0.95rem" },
+                            },
+                            "& .fc-toolbar": {
+                                flexWrap: "wrap",
+                                rowGap: 1,
+                                px: { xs: 1, md: 2 },
+                                pt: { xs: 1, md: 2 },
+                            },
+                            "& .fc-toolbar-title": {
+                                fontSize: { xs: "1rem", md: "1.2rem" },
+                            },
+                            "& .fc-button": {
+                                textTransform: "capitalize",
+                            },
+                            "& .fc-timegrid-slot": {
+                                height: { xs: "2rem", md: "2.3rem" },
+                            },
+                            "& .fc-daygrid-day-frame": {
+                                minHeight: "3rem",
+                            },
+                        }}
+                    >
+                        <CalendarComponent
+                            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+                            locale={ptBrLocale}
+                            initialView={isMobile ? "listWeek" : "timeGridWeek"}
+                            headerToolbar={{
+                                left: "prev,next today",
+                                center: "title",
+                                right: isMobile ? "listWeek,dayGridMonth" : "timeGridWeek,dayGridMonth,listWeek",
+                            }}
+                            buttonText={{
+                                today: "hoje",
+                                month: "mes",
+                                week: "semana",
+                                day: "dia",
+                                list: "lista",
+                            }}
+                            allDayText="Dia inteiro"
+                            noEventsContent="Nenhum evento para exibir"
+                            events={events}
+                            firstDay={1}
+                            slotMinTime="07:00:00"
+                            slotMaxTime="22:00:00"
+                            slotDuration="01:00:00"
+                            slotLabelInterval="01:00:00"
+                            nowIndicator
+                            expandRows
+                            eventDisplay="block"
+                            height="auto"
+                            stickyHeaderDates
+                        />
+                    </Box>
+
+                    {showEvaluations && isEvaluationsLoading && (
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2 }}>
+                            <CircularProgress size={18} />
+                            <Typography variant="body2" color="text.secondary">
+                                Carregando avaliacoes...
+                            </Typography>
+                        </Stack>
+                    )}
+                </Box>
+            </Box>
         </Base>
     );
 }
