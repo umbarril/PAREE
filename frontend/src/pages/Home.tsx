@@ -292,24 +292,23 @@ function ClassCard({
                 </div>
             </div>
 
-            <div className={`flex-1 p-4 ${bodyPt} flex flex-col gap-3`}>
-                <div className={spacing}>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Última notícia</p>
-                        {latestNews && <p className="text-xs text-slate-500 shrink-0">{formatDate(latestNews.data)}</p>}
-                    </div>
-                    {isPreviewLoading && !latestNews ? (
+            <div className={`flex-1 p-4 ${bodyPt} flex flex-col gap-3 ${spacing}`}>
+                {isPreviewLoading && !latestNews ? (
                         <p className="text-sm text-slate-500">Carregando...</p>
-                    ) : latestNews ? (
+                ) : latestNews ? (
+                    <div >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Última notícia</p>
+                            {latestNews && <p className="text-xs text-slate-500 shrink-0">{formatDate(latestNews.data)}</p>}
+                        </div>
                         <p className="text-sm font-medium text-slate-900 wrap-break-word line-clamp-3" title={latestNews.descricaoNoticia || stripHtml(latestNews.htmlNoticia || "Sem titulo")}>
                             {latestNews.descricaoNoticia || stripHtml(latestNews.htmlNoticia || "Sem titulo")}
                         </p>
-                    ) : (
-                        <p className="text-sm text-slate-500">Sem noticias recentes.</p>
-                    )}
-                </div>
+                        <div className="border-b border-slate-200 pt-2"></div>
+                    </div>
+                ) : (<></>)}
 
-                <div className="border-t border-slate-200 pt-2">
+                <div>
                     {nextEvaluation && (
                         <>
                             <p className={`text-[11px] uppercase tracking-wide ${isDistantEvaluation ? "text-slate-400" : "text-slate-500"}`}>Proxima avaliacao</p>
@@ -321,9 +320,6 @@ function ClassCard({
                                 {shouldHighlightEvaluationTime ? ` • ${daysUntil(nextEvaluation.dataRealizacao)}` : ""}
                             </p>
                         </>
-                    )}
-                    {!nextEvaluation && (
-                        <p className="text-sm text-slate-500">Sem avaliacoes proximas.</p>
                     )}
                 </div>
 
