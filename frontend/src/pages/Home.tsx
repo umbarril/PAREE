@@ -121,14 +121,19 @@ function formatDate(value?: string | null): string {
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-function daysUntil(value?: string | null): string {
+function getDaysUntil(value?: string | null): number | null {
     const d = parseDate(value);
-    if (!d) return "sem data";
+    if (!d) return null;
 
     const now = new Date();
     const start = startOfDay(now);
     const target = startOfDay(d);
-    const diff = Math.floor((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.floor((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function daysUntil(value?: string | null): string {
+    const diff = getDaysUntil(value);
+    if (diff === null) return "sem data";
 
     if (diff === 0) return "hoje";
     if (diff === 1) return "amanha";
@@ -220,6 +225,9 @@ function ClassCard({
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const latestNews = getLatestNews(preview?.news ?? []);
     const nextEvaluation = getNextEvaluation(preview?.coursePlan ?? null);
+    const nextEvaluationDays = getDaysUntil(nextEvaluation?.dataRealizacao);
+    const shouldHighlightEvaluationTime = nextEvaluationDays !== null && nextEvaluationDays <= 7;
+    const isDistantEvaluation = nextEvaluationDays !== null && nextEvaluationDays > 14;
     const professors = preview?.professors ?? [];
     const scheduleLines = buildScheduleLines(turma);
     const multiple = professors.length > 1;
@@ -304,12 +312,13 @@ function ClassCard({
                 <div className="border-t border-slate-200 pt-2">
                     {nextEvaluation && (
                         <>
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Proxima avaliacao</p>
-                            <p className="text-sm font-medium text-slate-900 line-clamp-2 wrap-break-word" title={nextEvaluation.descricao}>
+                            <p className={`text-[11px] uppercase tracking-wide ${isDistantEvaluation ? "text-slate-400" : "text-slate-500"}`}>Proxima avaliacao</p>
+                            <p className={`text-sm font-medium line-clamp-2 wrap-break-word ${isDistantEvaluation ? "text-slate-500" : "text-slate-900"}`} title={nextEvaluation.descricao}>
                                 {nextEvaluation.descricao || "Avaliacao"}
                             </p>
-                            <p className="text-xs text-amber-700">
-                                {formatDate(nextEvaluation.dataRealizacao)} • {daysUntil(nextEvaluation.dataRealizacao)}
+                            <p className={`text-xs ${shouldHighlightEvaluationTime ? "text-amber-700" : isDistantEvaluation ? "text-slate-400" : "text-slate-500"}`}>
+                                {formatDate(nextEvaluation.dataRealizacao)}
+                                {shouldHighlightEvaluationTime ? ` • ${daysUntil(nextEvaluation.dataRealizacao)}` : ""}
                             </p>
                         </>
                     )}

@@ -238,9 +238,9 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
 
           {upcomingTopic && (() => {
             const topicDate = getTopicDateRaw(upcomingTopic);
-            const days = daysUntil(topicDate);
-            const label = days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : days !== null ? `Em ${days} dias` : '';
-            const chipColor = (days === 0 ? 'error' : days !== null && days <= 3 ? 'warning' : 'default') as any;
+            // const days = daysUntil(topicDate);
+            // const label = days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : days !== null ? `Em ${days} dias` : '';
+            // const chipColor = (days === 0 ? 'error' : days !== null && days <= 3 ? 'warning' : 'default') as any;
             return (
               <Card
                 sx={{ mb: 2, cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s', '&:hover': { boxShadow: 4, transform: 'translateY(-1px)' } }}
@@ -251,7 +251,7 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
                   title="Próximo Tópico"
                   subheader={
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 0.5 }}>
-                      {label && <Chip label={label} size="small" color={chipColor} />}
+                      {/* {label && <Chip label={label} size="small" color={chipColor} />} */}
                       <Typography variant="caption" color="text.secondary">{fmtShortDate(topicDate)}</Typography>
                     </Box>
                   }
