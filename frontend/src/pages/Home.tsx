@@ -1,4 +1,4 @@
-import { type JSX } from "react";
+import { type JSX, useState } from "react";
 import { useNavigate } from "react-router";
 import Base from "../components/Base";
 import { fetchClassCoursePlan, fetchClassNews, fetchClassProfessors, fetchClasses } from "../services/ClassesService";
@@ -10,6 +10,7 @@ import type { NewsPieceResponse } from "../types/NewsResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
 import { Box, LinearProgress } from "@mui/material";
+import { BiTime } from "react-icons/bi";
 
 type ClassPreviewData = {
     news: NewsPieceResponse[];
@@ -179,6 +180,32 @@ function buildProfessorLine(
     return { line, full };
 }
 
+function buildScheduleLines(turma: TurmaResponse): string[] {
+    if (Array.isArray(turma.horarioTurma) && turma.horarioTurma.length > 0) {
+        const normalized = turma.horarioTurma
+            .map((h) => {
+                const day = h.dia?.trim();
+                const start = h.horaInicio?.trim();
+                const end = h.horaFim?.trim();
+                if (!day || !start || !end) return null;
+                return `${day}: ${start} - ${end}`;
+            })
+            .filter((line): line is string => Boolean(line));
+
+        return Array.from(new Set(normalized));
+    }
+
+    const raw = turma.horario?.trim();
+    if (!raw) return ["Horario nao informado"];
+
+    const split = raw
+        .split(/\s*(?:\|+|;|,)\s*/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    return split.length ? split : [raw];
+}
+
 function ClassCard({
     turma,
     preview,
@@ -190,9 +217,11 @@ function ClassCard({
     isPreviewLoading: boolean;
     onOpen: () => void;
 }): JSX.Element {
+    const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const latestNews = getLatestNews(preview?.news ?? []);
     const nextEvaluation = getNextEvaluation(preview?.coursePlan ?? null);
     const professors = preview?.professors ?? [];
+    const scheduleLines = buildScheduleLines(turma);
     const multiple = professors.length > 1;
     const visibleAvatars = professors.slice(0, 2);
     const hiddenCount = Math.max(0, professors.length - visibleAvatars.length);
@@ -289,8 +318,35 @@ function ClassCard({
                     )}
                 </div>
 
-                <div className="mt-auto border-t border-slate-200 pt-3 flex items-center justify-between text-sm text-slate-700">
-                    <span className="font-medium">Ver →</span>
+                <div className="mt-auto border-t border-slate-200 pt-3 text-sm text-slate-700">
+                    <div className="flex items-center justify-between">
+                        <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            aria-label={`Mostrar horarios da turma ${turma.nome}`}
+                            aria-expanded={isScheduleOpen}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsScheduleOpen((prev) => !prev);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.stopPropagation();
+                                }
+                            }}
+                        >
+                            <BiTime className="text-base" />
+                            <span>Horarios</span>
+                        </button>
+                        <span className="font-medium">Ver →</span>
+                    </div>
+                    {isScheduleOpen && (
+                        <ul className="mt-2 space-y-1 rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+                            {scheduleLines.map((line, index) => (
+                                <li key={`${turma.idTurma}-${index}`}>{line}</li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             </div>
         </article>
