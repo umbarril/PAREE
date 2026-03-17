@@ -31,7 +31,8 @@ function parseDate(value?: string | null): Date | null {
     const raw = value.trim();
     if (!raw) return null;
 
-    const brMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    // formato SIGAA: dd/MM/yyyy HH:mm 
+    const brMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
     if (brMatch) {
         const day = Number(brMatch[1]);
         const month = Number(brMatch[2]);
@@ -39,8 +40,9 @@ function parseDate(value?: string | null): Date | null {
         const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
         const hour = Number(brMatch[4] ?? 0);
         const minute = Number(brMatch[5] ?? 0);
+        const second = Number(brMatch[6] ?? 0);
 
-        const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+        const parsed = new Date(year, month - 1, day, hour, minute, second, 0);
         if (
             parsed.getFullYear() === year &&
             parsed.getMonth() === month - 1 &&
@@ -84,19 +86,14 @@ function getLatestNews(news: NewsPieceResponse[]): NewsPieceResponse | null {
     const cutoff = new Date(today);
     cutoff.setDate(cutoff.getDate() - 14);
 
-    const sorted = news
-        .filter((piece) => {
-            const pieceDate = parseDate(piece.data);
-            if (!pieceDate) return false;
-            return startOfDay(pieceDate).getTime() >= cutoff.getTime();
-        })
-        .sort((a, b) => {
-            const ta = parseDate(a.data)?.getTime() ?? 0;
-            const tb = parseDate(b.data)?.getTime() ?? 0;
-            return tb - ta;
-        });
+    // api já retorna as notícias em ordem decrescente, então basta achar a primeira que esteja dentro da janela de 14 dias.
+    const firstRecent = news.find((piece) => {
+        const pieceDate = parseDate(piece.data);
+        if (!pieceDate) return false;
+        return startOfDay(pieceDate).getTime() >= cutoff.getTime();
+    });
 
-    return sorted[0] ?? null;
+    return firstRecent ?? null;
 }
 
 function getNextEvaluation(coursePlan: CoursePlanResponse | null): Avaliacao | null {
@@ -260,7 +257,7 @@ function ClassCard({
             <div className={`p-4 ${bodyPt} flex flex-col gap-3`}>
                 <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Ultima noticia</p>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Última notícia</p>
                         {latestNews && <p className="text-xs text-slate-500 shrink-0">{formatDate(latestNews.data)}</p>}
                     </div>
                     {isPreviewLoading && !latestNews ? (

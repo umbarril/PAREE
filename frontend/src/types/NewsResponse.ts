@@ -4,5 +4,5 @@ export interface NewsPieceResponse {
   nomePessoaCadastro: string;
   descricaoNoticia: string;
   htmlNoticia: string;
-  data: string;
+  data: string; // dd/mm/yyyy HH:MM
 }
