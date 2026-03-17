@@ -9,7 +9,7 @@ import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
 import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress, useMediaQuery, useTheme } from "@mui/material";
-import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend, BiHomeAlt2, BiBookContent, BiGroup, BiGridAlt } from "react-icons/bi";
+import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend, BiHomeAlt2, BiBookContent, BiGroup, BiGridAlt, BiCalendarEvent, BiAlarm } from "react-icons/bi";
 import { useQuery } from "@tanstack/react-query";
 import type { FrequencyResponse, FrequencyResponseItem } from "../types/FrequencyResponse";
 
@@ -61,7 +61,7 @@ export default function Classes(): JSX.Element {
       </Box>
 
       <div className="flex-1 flex flex-col">
-        <main className="p-6 overflow-auto">
+        <main className={menu === 0 ? "p-6 overflow-hidden" : "p-6 overflow-auto"}>
           <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
             <Tabs
               value={menu}
@@ -121,10 +121,90 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
       queryFn: () => fetchClassNews(id),
     });
 
-    const { data: professors = [], isFetching: isProfessorsFetching} = useQuery({
+    const { data: professors = [], isFetching: isProfessorsFetching } = useQuery({
       queryKey: ["class", id, "professors"],
       queryFn: () => fetchClassProfessors(id),
     });
+
+    const { data: coursePlan } = useQuery<CoursePlanResponse>({
+      queryKey: ["class", id, "course-plan"],
+      queryFn: () => fetchClassCoursePlan(id),
+    });
+
+    const navigate = useNavigate();
+
+    const parseApiDate = (value?: string | null): Date | null => {
+      if (!value) return null;
+      const raw = String(value).trim();
+      if (!raw) return null;
+
+      // Handles dd/mm/yyyy and dd/mm/yyyy hh:mm[:ss] consistently.
+      const brMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (brMatch) {
+        const day = Number(brMatch[1]);
+        const month = Number(brMatch[2]) - 1;
+        const year = Number(brMatch[3]);
+        const hour = Number(brMatch[4] ?? 0);
+        const minute = Number(brMatch[5] ?? 0);
+        const second = Number(brMatch[6] ?? 0);
+        const parsed = new Date(year, month, day, hour, minute, second);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      const parsed = new Date(raw);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const getTopicDateRaw = (topic: { dataInicio?: string | null; dataCadastro?: string | null }): string | null => {
+      return topic.dataInicio ?? topic.dataCadastro ?? null;
+    };
+
+    const upcomingTopic = useMemo(() => {
+      if (!coursePlan?.topicosDeAula) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const candidates = coursePlan.topicosDeAula
+        .filter((t) => !t.cancelada)
+        .map((t) => ({ topic: t, date: parseApiDate(getTopicDateRaw(t)) }))
+        .filter((item) => item.date !== null && item.date >= today) as Array<{ topic: CoursePlanResponse["topicosDeAula"][number]; date: Date }>;
+
+      if (candidates.length === 0) return null;
+
+      candidates.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+      return candidates[0]?.topic ?? null;
+    }, [coursePlan]);
+
+    const upcomingEvaluation = useMemo(() => {
+      if (!coursePlan?.avaliacoes) return null;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const sorted = coursePlan.avaliacoes
+        .map((a) => ({ evaluation: a, date: parseApiDate(a.dataRealizacao) }))
+        .filter((item) => item.evaluation.ativo && item.date !== null && item.date >= now)
+        .sort((a, b) => a.date!.getTime() - b.date!.getTime());
+      return sorted[0]?.evaluation ?? null;
+    }, [coursePlan]);
+
+    const fmtShortDate = (d?: string | null): string => {
+      if (!d) return 'Sem data';
+      const dt = parseApiDate(d);
+      if (!dt || isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+    };
+
+    const daysUntil = (d?: string | null): number | null => {
+      if (!d) return null;
+      const dt = parseApiDate(d);
+      if (!dt || isNaN(dt.getTime())) return null;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      dt.setHours(0, 0, 0, 0);
+      return Math.round((dt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    const toDataKey = (d?: string | null) => String(d ?? '').replace(/[^a-zA-Z0-9]/g, '-');
 
     const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
     const [menuEmail, setMenuEmail] = useState<string | null>(null);
@@ -151,13 +231,94 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
     }, [isNewsFetching, isProfessorsFetching, setLoading]);
 
     return (
-        <>
-        <Box sx={{ display: 'flex', itemsAlign: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6" component="h2">Notícias da Turma</Typography>
-        </Box>
+      <Grid container spacing={3}>
+        {/* Sidebar – próximos eventos */}
+        <Grid size={{ xs: 12, md: 4, lg: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>Próximos Eventos</Typography>
 
-        <Container maxWidth="lg">
-          <Grid container spacing={3} alignItems="stretch" justifyContent="center">
+          {upcomingTopic && (() => {
+            const topicDate = getTopicDateRaw(upcomingTopic);
+            const days = daysUntil(topicDate);
+            const label = days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : days !== null ? `Em ${days} dias` : '';
+            const chipColor = (days === 0 ? 'error' : days !== null && days <= 3 ? 'warning' : 'default') as any;
+            return (
+              <Card
+                sx={{ mb: 2, cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s', '&:hover': { boxShadow: 4, transform: 'translateY(-1px)' } }}
+                onClick={() => navigate(`/class/${id}/courseplan`, { state: { scrollTo: { kind: 'topico', topicoId: upcomingTopic.idTopicoAula } } })}
+              >
+                <CardHeader
+                  avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><BiCalendarEvent /></Avatar>}
+                  title="Próximo Tópico"
+                  subheader={
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 0.5 }}>
+                      {label && <Chip label={label} size="small" color={chipColor} />}
+                      <Typography variant="caption" color="text.secondary">{fmtShortDate(topicDate)}</Typography>
+                    </Box>
+                  }
+                />
+                <CardContent sx={{ pt: 0 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{upcomingTopic.descricao}</Typography>
+                  {upcomingTopic.conteudo && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', mt: 0.5 }}>
+                      {upcomingTopic.conteudo.replace(/<[^>]+>/g, '').trim()}
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {!upcomingTopic && (
+            <Card variant="outlined" sx={{ mb: 2 }}>
+              <CardContent>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Próximo Tópico</Typography>
+                <Typography color="text.secondary" variant="body2">Não há próximo tópico no plano.</Typography>
+              </CardContent>
+            </Card>
+          )}
+
+          {upcomingEvaluation && (() => {
+            const days = daysUntil(upcomingEvaluation.dataRealizacao);
+            const showLabel = days !== null && days <= 3;
+            const label = days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : days !== null ? `Em ${days} dias` : '';
+            const chipColor = (days === 0 ? 'error' : 'warning') as any;
+            return (
+              <Card
+                variant="outlined"
+                sx={{ mb: 2, cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s', '&:hover': { boxShadow: 3, transform: 'translateY(-1px)' } }}
+                onClick={() => navigate(`/class/${id}/courseplan`, { state: { scrollTo: { kind: 'avaliacao', dataKey: toDataKey(upcomingEvaluation.dataRealizacao) } } })}
+              >
+                <CardHeader
+                  avatar={<Avatar sx={{ bgcolor: 'grey.200', color: 'text.primary' }}><BiAlarm /></Avatar>}
+                  title="Próxima Avaliação"
+                  subheader={
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 0.5 }}>
+                      {showLabel && label && <Chip label={label} size="small" color={chipColor} variant="outlined" />}
+                      <Typography variant="caption" color="text.secondary">{fmtShortDate(upcomingEvaluation.dataRealizacao)}</Typography>
+                      {upcomingEvaluation.horario && <Typography variant="caption" color="text.secondary">{upcomingEvaluation.horario}</Typography>}
+                    </Box>
+                  }
+                />
+                <CardContent sx={{ pt: 0 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{upcomingEvaluation.descricao}</Typography>
+                  {upcomingEvaluation.observacoes && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{upcomingEvaluation.observacoes}</Typography>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+        </Grid>
+
+        {/* Notícias da Turma */}
+        <Grid size={{ xs: 12, md: 8, lg: 9 }}>
+          <Box sx={{ position: { md: 'sticky' }, top: 0, alignSelf: 'flex-start' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6" component="h2">Notícias da Turma</Typography>
+            </Box>
+            <Box sx={{ maxHeight: { md: 'calc(100vh - 220px)' }, overflowY: { md: 'auto' }, pr: { md: 1 } }}>
+              <Grid container spacing={2} alignItems="stretch" justifyContent="flex-start">
             {news.map((n) => {
               let cleanHtml = DOMPurify.sanitize(n.htmlNoticia || '');
               // normalize BR tags coming from API to avoid forced line breaks
@@ -167,36 +328,38 @@ function MainClassesMenu({ id, setLoading }: { id: string; setLoading: (loading:
               const shortDate = fullTimestamp.split(' ')[0] ?? fullTimestamp;
 
               return (
-                <Grid sx={{ display: 'flex', justifyContent: 'center', width: 'auto' }}>
-                  <Card sx={{ width: { xs: '100%', sm: 520, md: 640 }, display: 'flex', flexDirection: 'column', flex: '0 0 auto', minHeight: 240 }}>
+                <Grid key={`${n.data ?? 'date'}-${n.descricaoNoticia ?? 'news'}`} size={{ xs: 12 }} sx={{ display: 'flex' }}>
+                  <Card sx={{ width: '100%', maxWidth: 760, display: 'flex', flexDirection: 'column', minHeight: 240 }}>
                     <CardHeader sx={{ pb: 0.5 }}
                       avatar={
-                        prof && prof.urlFoto? 
-                        <Avatar alt={prof.nome} src={prof.urlFoto} /> : 
+                        prof && prof.urlFoto?
+                        <Avatar alt={prof.nome} src={prof.urlFoto} /> :
                         <Avatar>{n.nomePessoaCadastro?.[0] ?? '?'}</Avatar>
-                    }
+                      }
                       title={prof?.nome ?? n.nomePessoaCadastro ?? 'Desconecido'}
                       subheader={<Tooltip title={fullTimestamp}><Typography variant="caption">{shortDate}</Typography></Tooltip>}
                       action={
                         <IconButton aria-label="settings" onClick={(e) => handleMenuOpen(e, (prof as any)?.email ?? ((n as any).email ?? ''))}>
-                            <BiDotsVerticalRounded />
+                          <BiDotsVerticalRounded />
                         </IconButton>
-                        }
+                      }
                     />
                     <CardContent sx={{ flex: 1, overflow: 'hidden', pt: 1 }}>
-                        <Typography variant="h6" sx={{ mb: 0.5 }}>{n.descricaoNoticia}</Typography>
-                        <Box sx={{ color: 'text.secondary', overflowWrap: 'anywhere', wordBreak: 'break-word', '& img': { maxWidth: '100%', height: 'auto' } }} dangerouslySetInnerHTML={{ __html: cleanHtml }} />
+                      <Typography variant="h6" sx={{ mb: 0.5 }}>{n.descricaoNoticia}</Typography>
+                      <Box sx={{ color: 'text.secondary', overflowWrap: 'anywhere', wordBreak: 'break-word', '& img': { maxWidth: '100%', height: 'auto' } }} dangerouslySetInnerHTML={{ __html: cleanHtml }} />
                     </CardContent>
                   </Card>
                 </Grid>
               );
             })}
+              </Grid>
+            </Box>
             <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
               <MenuItem onClick={handleSendEmail} disabled={!menuEmail}>Enviar e-mail</MenuItem>
             </Menu>
-          </Grid>
-        </Container>
-        </>
+          </Box>
+        </Grid>
+      </Grid>
     )
 }
 
@@ -205,6 +368,33 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
       queryKey: ["class", id, "course-plan"],
       queryFn: () => fetchClassCoursePlan(id),
     });
+
+    const location = useLocation();
+    const scrollTarget = (location.state as { scrollTo?: { kind: string; topicoId?: number; dataKey?: string } } | null)?.scrollTo ?? null;
+    const scrollTargetKey: string | null = scrollTarget
+      ? scrollTarget.kind === 'topico'
+        ? `course-topico-${scrollTarget.topicoId}`
+        : `course-avaliacao-${scrollTarget.dataKey ?? ''}`
+      : null;
+
+    const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
+    const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+    const toggleItem = (key: string) => {
+      setExpandedItems(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+    };
+
+    useEffect(() => {
+      if (!scrollTargetKey || !coursePlan) return;
+      setExpandedItems(prev => { const next = new Set(prev); next.add(scrollTargetKey); return next; });
+      setHighlightedKey(scrollTargetKey);
+      requestAnimationFrame(() => {
+        const el = document.getElementById(scrollTargetKey);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      const timer = setTimeout(() => setHighlightedKey(null), 3000);
+      return () => clearTimeout(timer);
+    }, [scrollTargetKey, coursePlan]);
 
     useEffect(() => {
       setLoading(isFetching);
@@ -343,12 +533,16 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
         <div>
           {items.length === 0 && <Typography color="text.secondary">Nenhum item no plano.</Typography>}
           {items.map((it, idx) => {
+            const itemKey = it.kind === 'topico'
+              ? `course-topico-${it.payload.idTopicoAula}`
+              : `course-avaliacao-${String(it.payload.dataRealizacao ?? idx).replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const isHighlighted = highlightedKey === itemKey;
             const hasContent = (it.kind === 'topico' && ((it.payload.conteudo && it.payload.conteudo.trim()) || (it.payload.arquivos && it.payload.arquivos.length) || (it.payload.tarefas && it.payload.tarefas.length))) ||
               (it.kind === 'avaliacao' && ((it.payload.descricao && it.payload.descricao.trim()) || (it.payload.observacoes && it.payload.observacoes.trim())));
 
             if (!hasContent) {
               return (
-                <Card key={idx} sx={{ mb: 1, p: 0 }}>
+                <Card key={idx} id={itemKey} sx={{ mb: 1, p: 0, ...(isHighlighted ? { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px' } : {}) }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box sx={{ width: 44, height: 44, borderRadius: '50%', bgcolor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.main' }}>
@@ -366,7 +560,14 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
             }
 
             return (
-              <Accordion key={idx} disableGutters>
+              <Accordion
+                key={idx}
+                id={itemKey}
+                disableGutters
+                expanded={expandedItems.has(itemKey)}
+                onChange={() => toggleItem(itemKey)}
+                sx={isHighlighted ? { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px' } : undefined}
+              >
                 <AccordionSummary expandIcon={<BiExpandVertical />} sx={{ px: 2, py: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
