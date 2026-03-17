@@ -225,9 +225,9 @@ export default function Calendar(): JSX.Element {
         return ev;
     }, [classes, evaluationsData, showEvaluations]);
 
-    const handleGoogleSync = () => {
-        alert("Sincronizar com Google Calendar: funcionalidade em desenvolvimento.");
-    };
+    // const handleGoogleSync = () => {
+    //     alert("Sincronizar com Google Calendar: funcionalidade em desenvolvimento.");
+    // };
 
     return (
         <Base>
@@ -245,9 +245,9 @@ export default function Calendar(): JSX.Element {
                                 control={<Checkbox checked={showEvaluations} onChange={(e) => setShowEvaluations(e.target.checked)} />}
                                 label="Mostrar avaliacoes"
                             />
-                            <Button variant="outlined" onClick={handleGoogleSync}>
+                            {/* <Button variant="outlined" onClick={handleGoogleSync}>
                                 Sincronizar com Google Calendar
-                            </Button>
+                            </Button> */}
                         </Stack>
                     </Stack>
 
