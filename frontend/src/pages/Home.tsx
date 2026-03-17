@@ -241,7 +241,7 @@ export default function Home(): JSX.Element {
     const navigate = useNavigate();
     const goToClass = (id: string) => navigate(`/class/${id}`);
 
-    const { data: classes = [], isFetching: isFetchingClasses, error } = useQuery({
+    const { data: classes = [], isFetching: isFetchingClasses, isPending, error } = useQuery({
         queryKey: ['classes', user?.matricula],
         queryFn: async () => {
             if (!user) throw new Error("Usuário não autenticado. Por favor, faça login.");
@@ -267,7 +267,7 @@ export default function Home(): JSX.Element {
                     coursePlan: coursePlanResult.status === "fulfilled" ? coursePlanResult.value : null,
                 };
             },
-            staleTime: 1000 * 60 * 3,
+            staleTime: 1000 * 60 * 5,
         })),
     });
 
@@ -284,13 +284,15 @@ export default function Home(): JSX.Element {
                         </div>
                     )}
 
-                    {isFetchingClasses ? (
+                    {isPending ? (
                         <>
                             <svg className="w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                             </svg>
                             Carregando...
+
+                            {/* trocar por um circulo girando */}
                         </>
                     ) : classes.length === 0 ? (
                         <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
