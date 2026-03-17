@@ -3,7 +3,7 @@ import type { JSX, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { BiBookBookmark, BiCalendar, BiChevronDown, BiChevronUp, BiClipboard, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
 import { NavLink } from "react-router";
-import { generateVibrantColor } from "../ThemeHelper";
+import { generateColorFromPallete, generateVibrantColor } from "../ThemeHelper";
 import { useStudentClasses } from "../hooks/useStudentClasses";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
 
@@ -73,8 +73,8 @@ function ClassNavItem({ turma, onNavigate }: { turma: TurmaResponse; onNavigate?
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
             style={{
-              backgroundColor: `${generateVibrantColor(turma.nome)}22`,
-              color: generateVibrantColor(turma.nome),
+              backgroundColor: `${generateColorFromPallete(turma.nome)}22`,
+              color: generateColorFromPallete(turma.nome),
             }}
           >
             {getClassInitial(turma.nome)}

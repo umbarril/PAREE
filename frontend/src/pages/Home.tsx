@@ -2,7 +2,7 @@ import { type JSX } from "react";
 import { useNavigate } from "react-router";
 import Base from "../components/Base";
 import { fetchClassCoursePlan, fetchClassNews, fetchClassProfessors, fetchClasses } from "../services/ClassesService";
-import { generateVibrantColor } from "../ThemeHelper";
+import { generateColorFromPallete } from "../ThemeHelper";
 import { useAuthStore } from "../store/AuthStore";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type { Avaliacao, CoursePlanResponse } from "../types/CoursePlanResponse";
@@ -198,6 +198,7 @@ function ClassCard({
     const hiddenCount = Math.max(0, professors.length - visibleAvatars.length);
     const avatarSize = multiple ? "w-10 h-10" : "w-14 h-14";
     const avatarTextSize = multiple ? "text-xs" : "text-sm";
+    const spacing = multiple ? "mt-7" : "mt-4"; // baseado no tamanho do avatar
     const bodyPt = multiple ? "pt-5" : "pt-7";
     const { line: professorLine, full: professorFull } = buildProfessorLine(professors, turma.docentes);
 
@@ -211,7 +212,7 @@ function ClassCard({
                 if (e.key === "Enter" || e.key === " ") onOpen();
             }}
         >
-            <div className="relative h-32 p-4" style={{ background: generateVibrantColor(turma.nome) }}>
+            <div className="relative h-32 p-4" style={{ background: generateColorFromPallete(turma.nome) }}>
                 <div className="min-w-0">
                     <h3
                         className="text-lg font-bold text-slate-900 leading-tight truncate"
@@ -255,7 +256,7 @@ function ClassCard({
             </div>
 
             <div className={`flex-1 p-4 ${bodyPt} flex flex-col gap-3`}>
-                <div>
+                <div className={spacing}>
                     <div className="flex items-center justify-between gap-2 mb-1">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Última notícia</p>
                         {latestNews && <p className="text-xs text-slate-500 shrink-0">{formatDate(latestNews.data)}</p>}

@@ -14,3 +14,31 @@ export const generateVibrantColor = (seed: string): string => {
   // Return HSL string (70% saturation, 50% lightness for balanced colors)
   return `hsl(${hue}, 70%, 50%)`;
 };
+
+export const generateColorFromPallete = (seed: string): string => {
+  const palette = [
+    "#E57373", // Red
+    "#F06292", // Pink
+    "#BA68C8", // Purple
+    "#9575CD", // Deep Purple
+    "#7986CB", // Indigo
+    "#64B5F6", // Blue
+    "#4FC3F7", // Light Blue
+  ]
+  // https://color.adobe.com/create/color-wheel
+  const palette2 = [ // todo
+    "#E04131",
+    "#4338E0",
+    "#E0C638",
+    "#38E083",
+    "#A19450",
+    "#8B5651",
+    "#55518B",
+    "#518B6B",
+    "#615D49",
+    "#423938"
+  ]
+  const index = Math.abs(seed.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) % palette2.length;
+
+  return palette2[index];
+}
