@@ -205,7 +205,7 @@ function ClassCard({
         <article
             role="button"
             onClick={onOpen}
-            className="rounded-xl border border-slate-200 shadow-sm cursor-pointer bg-white overflow-hidden transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            className="h-full rounded-xl border border-slate-200 shadow-sm cursor-pointer bg-white overflow-hidden transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200 flex flex-col"
             tabIndex={0}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") onOpen();
@@ -254,7 +254,7 @@ function ClassCard({
                 </div>
             </div>
 
-            <div className={`p-4 ${bodyPt} flex flex-col gap-3`}>
+            <div className={`flex-1 p-4 ${bodyPt} flex flex-col gap-3`}>
                 <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Última notícia</p>
@@ -263,7 +263,7 @@ function ClassCard({
                     {isPreviewLoading && !latestNews ? (
                         <p className="text-sm text-slate-500">Carregando...</p>
                     ) : latestNews ? (
-                        <p className="text-sm font-medium text-slate-900 wrap-break-word">
+                        <p className="text-sm font-medium text-slate-900 wrap-break-word line-clamp-3" title={latestNews.descricaoNoticia || stripHtml(latestNews.htmlNoticia || "Sem titulo")}>
                             {latestNews.descricaoNoticia || stripHtml(latestNews.htmlNoticia || "Sem titulo")}
                         </p>
                     ) : (
@@ -275,7 +275,7 @@ function ClassCard({
                     {nextEvaluation && (
                         <>
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Proxima avaliacao</p>
-                            <p className="text-sm font-medium text-slate-900 truncate" title={nextEvaluation.descricao}>
+                            <p className="text-sm font-medium text-slate-900 line-clamp-2 wrap-break-word" title={nextEvaluation.descricao}>
                                 {nextEvaluation.descricao || "Avaliacao"}
                             </p>
                             <p className="text-xs text-amber-700">
@@ -288,7 +288,7 @@ function ClassCard({
                     )}
                 </div>
 
-                <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-sm text-slate-700">
+                <div className="mt-auto border-t border-slate-200 pt-3 flex items-center justify-between text-sm text-slate-700">
                     <span className="font-medium">Ver →</span>
                 </div>
             </div>
