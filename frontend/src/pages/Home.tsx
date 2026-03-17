@@ -21,30 +21,92 @@ function stripHtml(raw: string): string {
     return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function parseDate(value?: string | null): Date | null {
     if (!value) return null;
-    const d = new Date(value);
+
+    const raw = value.trim();
+    if (!raw) return null;
+
+    const brMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    if (brMatch) {
+        const day = Number(brMatch[1]);
+        const month = Number(brMatch[2]);
+        const yearRaw = Number(brMatch[3]);
+        const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+        const hour = Number(brMatch[4] ?? 0);
+        const minute = Number(brMatch[5] ?? 0);
+
+        const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+        if (
+            parsed.getFullYear() === year &&
+            parsed.getMonth() === month - 1 &&
+            parsed.getDate() === day
+        ) {
+            return parsed;
+        }
+        return null;
+    }
+
+    // Handle yyyy-MM-dd (and optional time) without timezone surprises.
+    const isoDateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (isoDateOnlyMatch) {
+        const year = Number(isoDateOnlyMatch[1]);
+        const month = Number(isoDateOnlyMatch[2]);
+        const day = Number(isoDateOnlyMatch[3]);
+        const hour = Number(isoDateOnlyMatch[4] ?? 0);
+        const minute = Number(isoDateOnlyMatch[5] ?? 0);
+        const second = Number(isoDateOnlyMatch[6] ?? 0);
+
+        const parsed = new Date(year, month - 1, day, hour, minute, second, 0);
+        if (
+            parsed.getFullYear() === year &&
+            parsed.getMonth() === month - 1 &&
+            parsed.getDate() === day
+        ) {
+            return parsed;
+        }
+        return null;
+    }
+
+    const d = new Date(raw);
     if (isNaN(d.getTime())) return null;
     return d;
 }
 
 function getLatestNews(news: NewsPieceResponse[]): NewsPieceResponse | null {
     if (!news.length) return null;
-    const sorted = [...news].sort((a, b) => {
-        const ta = parseDate(a.data)?.getTime() ?? 0;
-        const tb = parseDate(b.data)?.getTime() ?? 0;
-        return tb - ta;
-    });
+
+    const today = startOfDay(new Date());
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - 14);
+
+    const sorted = news
+        .filter((piece) => {
+            const pieceDate = parseDate(piece.data);
+            if (!pieceDate) return false;
+            return startOfDay(pieceDate).getTime() >= cutoff.getTime();
+        })
+        .sort((a, b) => {
+            const ta = parseDate(a.data)?.getTime() ?? 0;
+            const tb = parseDate(b.data)?.getTime() ?? 0;
+            return tb - ta;
+        });
+
     return sorted[0] ?? null;
 }
 
 function getNextEvaluation(coursePlan: CoursePlanResponse | null): Avaliacao | null {
     if (!coursePlan?.avaliacoes?.length) return null;
-    const now = new Date();
+    const todayStart = startOfDay(new Date());
+
     const upcoming = coursePlan.avaliacoes
         .filter((a) => {
             const d = parseDate(a.dataRealizacao);
-            return d && d.getTime() >= now.getTime();
+            return d ? startOfDay(d).getTime() >= todayStart.getTime() : false;
         })
         .sort((a, b) => {
             const ta = parseDate(a.dataRealizacao)?.getTime() ?? Number.MAX_SAFE_INTEGER;
@@ -66,9 +128,9 @@ function daysUntil(value?: string | null): string {
     if (!d) return "sem data";
 
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const diff = Math.round((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const start = startOfDay(now);
+    const target = startOfDay(d);
+    const diff = Math.floor((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diff === 0) return "hoje";
     if (diff === 1) return "amanha";
@@ -195,8 +257,8 @@ function ClassCard({
                 </div>
             </div>
 
-            <div className={`p-4 ${bodyPt} flex flex-col`}>
-                <div className="h-20 overflow-hidden">
+            <div className={`p-4 ${bodyPt} flex flex-col gap-3`}>
+                <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Ultima noticia</p>
                         {latestNews && <p className="text-xs text-slate-500 shrink-0">{formatDate(latestNews.data)}</p>}
@@ -204,7 +266,7 @@ function ClassCard({
                     {isPreviewLoading && !latestNews ? (
                         <p className="text-sm text-slate-500">Carregando...</p>
                     ) : latestNews ? (
-                        <p className="text-sm font-medium text-slate-900 line-clamp-2">
+                        <p className="text-sm font-medium text-slate-900 wrap-break-word">
                             {latestNews.descricaoNoticia || stripHtml(latestNews.htmlNoticia || "Sem titulo")}
                         </p>
                     ) : (
@@ -212,7 +274,7 @@ function ClassCard({
                     )}
                 </div>
 
-                <div className="h-14 overflow-hidden border-t border-slate-200 pt-2">
+                <div className="border-t border-slate-200 pt-2">
                     {nextEvaluation && (
                         <>
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">Proxima avaliacao</p>
@@ -223,6 +285,9 @@ function ClassCard({
                                 {formatDate(nextEvaluation.dataRealizacao)} • {daysUntil(nextEvaluation.dataRealizacao)}
                             </p>
                         </>
+                    )}
+                    {!nextEvaluation && (
+                        <p className="text-sm text-slate-500">Sem avaliacoes proximas.</p>
                     )}
                 </div>
 
