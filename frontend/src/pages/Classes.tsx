@@ -239,6 +239,23 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 
     const references = coursePlan.referencias ?? [];
 
+    // Returns true when HTML/text is effectively empty (null, whitespace-only, or trivial punctuation like ".")
+    const isHtmlEmpty = (html: string | null | undefined): boolean => {
+      if (!html) return true;
+      const stripped = html.replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').trim();
+      return stripped === '' || /^[\s.\-—·]+$/.test(stripped);
+    };
+
+    const isTextEmpty = (val: string | number | null | undefined): boolean => {
+      if (val === null || val === undefined) return true;
+      const s = String(val).trim();
+      return s === '' || /^[\s.\-—·]+$/.test(s);
+    };
+
+    const EmptyPlaceholder = () => (
+      <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic', mt: 0.5 }}>Não informado</Typography>
+    );
+
     const fmtDate = (d?: string|null) => {
       if (!d) return 'Sem data';
       const str = String(d);
@@ -277,35 +294,45 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
             <Grid container spacing={2} sx={{ mt: 2 }}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2">Objetivos</Typography>
-                <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.objetivos || '') }} />
+                {isHtmlEmpty(coursePlan.objetivos)
+                  ? <EmptyPlaceholder />
+                  : <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.objetivos) }} />}
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2">Conteúdo</Typography>
-                <Box sx={{ color: 'text.secondary', mt: 0.5, maxHeight: 140, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.conteudo || '') }} />
+                {isHtmlEmpty(coursePlan.conteudo)
+                  ? <EmptyPlaceholder />
+                  : <Box sx={{ color: 'text.secondary', mt: 0.5, maxHeight: 140, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.conteudo) }} />}
               </Grid>
 
               <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2">Procedimento de Avaliação</Typography>
-                <Typography variant="body2" color="text.secondary">{String(coursePlan.procedimentoAvaliacaoAprendizagem ?? '—')}</Typography>
+                {isTextEmpty(coursePlan.procedimentoAvaliacaoAprendizagem)
+                  ? <EmptyPlaceholder />
+                  : <Typography variant="body2" color="text.secondary">{String(coursePlan.procedimentoAvaliacaoAprendizagem)}</Typography>}
               </Grid>
 
               <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2">Horário de Atendimento</Typography>
-                <Typography variant="body2" color="text.secondary">{coursePlan.horarioAtendimento ?? '—'}</Typography>
+                {isTextEmpty(coursePlan.horarioAtendimento)
+                  ? <EmptyPlaceholder />
+                  : <Typography variant="body2" color="text.secondary">{coursePlan.horarioAtendimento}</Typography>}
               </Grid>
 
               <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2">Competências / Habilidades</Typography>
-                <Box sx={{ color: 'text.secondary' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.habilidadesCompetencias || '') }} />
+                {isHtmlEmpty(coursePlan.habilidadesCompetencias)
+                  ? <EmptyPlaceholder />
+                  : <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.habilidadesCompetencias) }} />}
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2">Exame Final / Reposição</Typography>
-                <Typography variant="body2" color="text.secondary">Exame: {coursePlan.exameFinal ?? '—'}</Typography>
-                <Typography variant="body2" color="text.secondary">Hora exame: {coursePlan.horaExameFinal ?? '—'}</Typography>
-                <Typography variant="body2" color="text.secondary">Reposição: {coursePlan.reposicao ?? '—'}</Typography>
-                <Typography variant="body2" color="text.secondary">Hora reposição: {coursePlan.horaReposicao ?? '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">Exame: {isTextEmpty(coursePlan.exameFinal) ? <em>Não informado</em> : coursePlan.exameFinal}</Typography>
+                <Typography variant="body2" color="text.secondary">Hora exame: {isTextEmpty(coursePlan.horaExameFinal) ? <em>Não informado</em> : coursePlan.horaExameFinal}</Typography>
+                <Typography variant="body2" color="text.secondary">Reposição: {isTextEmpty(coursePlan.reposicao) ? <em>Não informado</em> : coursePlan.reposicao}</Typography>
+                <Typography variant="body2" color="text.secondary">Hora reposição: {isTextEmpty(coursePlan.horaReposicao) ? <em>Não informado</em> : coursePlan.horaReposicao}</Typography>
               </Grid>
             </Grid>
           </CardContent>
