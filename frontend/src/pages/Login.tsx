@@ -4,7 +4,7 @@ import { Box, Container, TextField, Button, Typography, Paper, Alert, CircularPr
 import { BiInfoCircle } from "react-icons/bi";
 import axios from "axios";
 import { fetchAuthData } from "../services/LoginService";
-import { authResponseToUser, useAuthStore } from "../store/AuthStore";
+import { authResponseToSession, useAuthStore } from "../store/AuthStore";
 
 export default function LoginPortal(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -45,7 +45,8 @@ export default function LoginPortal(): JSX.Element {
     setLoading(true);
     try {
       const response = await fetchAuthData(username, password);
-      login(authResponseToUser(response.data));
+      const sessionData = await authResponseToSession(response.data);
+      login(sessionData);
       navigate("/");
     } catch (err) {
       // Tratamento específico para erros HTTP do axios e erros de rede
