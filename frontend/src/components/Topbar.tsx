@@ -2,7 +2,7 @@ import IconButton from "@mui/material/IconButton";
 import { BiMenu } from "react-icons/bi";
 import { useAuthStore } from "../store/AuthStore";
 import { Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
-import { useMemo, useState, useEffect, type JSX } from "react";
+import { useMemo, type JSX } from "react";
 import { BiChevronRight } from "react-icons/bi";
 import { Link, useLocation, useParams } from "react-router";
 import { useStudentClasses } from "../hooks/useStudentClasses";
