@@ -162,6 +162,31 @@ function toDisplayName(name: string): string {
         .join(" ");
 }
 
+function shortenProfessorName(name: string, maxLength: number): string {
+    if (name.length <= maxLength) return name;
+
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) {
+        return `${name.slice(0, maxLength - 1).trimEnd()}\u2026`;
+    }
+
+    const removableJoiners = new Set(["de", "da", "do", "dos", "das", "e"]);
+    const shortenedParts = [...parts];
+
+    shortenedParts.pop();
+    while (
+        shortenedParts.length > 1 &&
+        removableJoiners.has(shortenedParts[shortenedParts.length - 1].toLowerCase())
+    ) {
+        shortenedParts.pop();
+    }
+
+    const shortenedName = shortenedParts.join(" ");
+    if (shortenedName.length <= maxLength) return shortenedName;
+
+    return `${shortenedName.slice(0, maxLength - 1).trimEnd()}\u2026`;
+}
+
 function buildProfessorLine(
     professors: ProfessorResponse[],
     docentesFallback?: string[] | null,
@@ -179,25 +204,157 @@ function buildProfessorLine(
     // char budget per name shrinks as more names are shown
     const perName = [28, 15, 9][Math.min(visible.length - 1, 2)];
     const line = visible
-        .map((n) => (n.length > perName ? `${n.slice(0, perName - 1).trimEnd()}\u2026` : n))
+        .map((name) => shortenProfessorName(name, perName))
         .join(", ");
 
     return { line, full };
 }
 
+type ScheduleInterval = {
+    dayOrder: number;
+    dayLabel: string;
+    startMinutes: number;
+    endMinutes: number;
+};
+
+const weekdayLabels: Record<number, string> = {
+    0: "Domingo",
+    1: "Domingo",
+    2: "Segunda-feira",
+    3: "Terca-feira",
+    4: "Quarta-feira",
+    5: "Quinta-feira",
+    6: "Sexta-feira",
+    7: "Sabado",
+};
+
+function normalizeWeekday(day?: string | null): { order: number; label: string } | null {
+    if (!day) return null;
+
+    const raw = day.trim();
+    if (!raw) return null;
+
+    const normalized = raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    if (/^\d+$/.test(normalized)) {
+        const value = Number(normalized);
+        if (value >= 1 && value <= 7) {
+            return { order: value, label: weekdayLabels[value] };
+        }
+
+        if (value >= 0 && value <= 6) {
+            const shifted = value + 1;
+            return { order: shifted, label: weekdayLabels[shifted] };
+        }
+    }
+
+    if (normalized.includes("domingo")) return { order: 1, label: weekdayLabels[1] };
+    if (normalized.includes("segunda")) return { order: 2, label: weekdayLabels[2] };
+    if (normalized.includes("terca")) return { order: 3, label: weekdayLabels[3] };
+    if (normalized.includes("quarta")) return { order: 4, label: weekdayLabels[4] };
+    if (normalized.includes("quinta")) return { order: 5, label: weekdayLabels[5] };
+    if (normalized.includes("sexta")) return { order: 6, label: weekdayLabels[6] };
+    if (normalized.includes("sabado")) return { order: 7, label: weekdayLabels[7] };
+
+    return null;
+}
+
+function parseTimeToMinutes(value?: string | null): number | null {
+    if (!value) return null;
+
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return null;
+
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+    return (hour * 60) + minute;
+}
+
+function formatMinutes(minutes: number): string {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    return `${hour}:${String(minute).padStart(2, "0")}`;
+}
+
+function buildScheduleInterval(day?: string | null, start?: string | null, end?: string | null): ScheduleInterval | null {
+    const weekday = normalizeWeekday(day);
+    const startMinutes = parseTimeToMinutes(start);
+    const endMinutes = parseTimeToMinutes(end);
+
+    if (!weekday || startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+        return null;
+    }
+
+    return {
+        dayOrder: weekday.order,
+        dayLabel: weekday.label,
+        startMinutes,
+        endMinutes,
+    };
+}
+
+function mergeScheduleIntervals(intervals: ScheduleInterval[]): string[] {
+    if (intervals.length === 0) return [];
+
+    const sorted = [...intervals].sort((a, b) => {
+        if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
+        if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes;
+        return a.endMinutes - b.endMinutes;
+    });
+
+    const merged: ScheduleInterval[] = [];
+
+    sorted.forEach((interval) => {
+        const last = merged[merged.length - 1];
+        if (!last || last.dayOrder !== interval.dayOrder || interval.startMinutes > last.endMinutes) {
+            merged.push({ ...interval });
+            return;
+        }
+
+        last.endMinutes = Math.max(last.endMinutes, interval.endMinutes);
+    });
+
+    return merged.map((interval) => (
+        `${interval.dayLabel}: ${formatMinutes(interval.startMinutes)} - ${formatMinutes(interval.endMinutes)}`
+    ));
+}
+
+function parseRawScheduleInterval(value: string): ScheduleInterval | null {
+    const match = value.match(/^([^:]+?)\s*:?\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*-\s*(\d{1,2}:\d{2}(?::\d{2})?)$/i);
+    if (!match) return null;
+
+    return buildScheduleInterval(match[1], match[2], match[3]);
+}
+
+function formatRawScheduleLine(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) return trimmed;
+
+    const parsed = parseRawScheduleInterval(trimmed);
+    if (parsed) {
+        return `${parsed.dayLabel}: ${formatMinutes(parsed.startMinutes)} - ${formatMinutes(parsed.endMinutes)}`;
+    }
+
+    return trimmed.replace(/(\d{1,2}):(\d{2})(?::\d{2})/g, (_, hour: string, minute: string) => (
+        `${Number(hour)}:${minute}`
+    ));
+}
+
 function buildScheduleLines(turma: TurmaResponse): string[] {
     if (Array.isArray(turma.horarioTurma) && turma.horarioTurma.length > 0) {
         const normalized = turma.horarioTurma
-            .map((h) => {
-                const day = h.dia?.trim();
-                const start = h.horaInicio?.trim();
-                const end = h.horaFim?.trim();
-                if (!day || !start || !end) return null;
-                return `${day}: ${start} - ${end}`;
-            })
-            .filter((line): line is string => Boolean(line));
+            .map((h) => buildScheduleInterval(h.dia, h.horaInicio, h.horaFim))
+            .filter((interval): interval is ScheduleInterval => Boolean(interval));
 
-        return Array.from(new Set(normalized));
+        const merged = mergeScheduleIntervals(normalized);
+        if (merged.length > 0) return merged;
+
+        return ["Horario nao informado"];
     }
 
     const raw = turma.horario?.trim();
@@ -208,7 +365,15 @@ function buildScheduleLines(turma: TurmaResponse): string[] {
         .map((part) => part.trim())
         .filter(Boolean);
 
-    return split.length ? split : [raw];
+    const parsed = split
+        .map((part) => parseRawScheduleInterval(part))
+        .filter((interval): interval is ScheduleInterval => Boolean(interval));
+
+    if (parsed.length === split.length && parsed.length > 0) {
+        return mergeScheduleIntervals(parsed);
+    }
+
+    return split.length ? split.map(formatRawScheduleLine) : [formatRawScheduleLine(raw)];
 }
 
 function ClassCard({
