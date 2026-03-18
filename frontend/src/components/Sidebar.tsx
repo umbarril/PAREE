@@ -3,7 +3,7 @@ import type { JSX, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { BiBookBookmark, BiCalendar, BiChevronDown, BiChevronUp, BiClipboard, BiHome, BiLibrary, BiLogOut, BiX } from "react-icons/bi";
 import { NavLink } from "react-router";
-import { generateColorFromPallete, generateVibrantColor } from "../ThemeHelper";
+import { generateColorFromPallete } from "../ThemeHelper";
 import { useStudentClasses } from "../hooks/useStudentClasses";
 import type { TurmaResponse } from "../types/StudentClassesResponse";
 
