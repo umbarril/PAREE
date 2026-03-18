@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -62,6 +63,20 @@ func main() {
 
 	// personal
 	mux.HandleFunc("/personal/", proxy.ServeHTTP)
+
+	filepath := "./frontend/dist"
+	fileServer := http.FileServer(http.Dir(filepath))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_, err := os.Stat(filepath + r.URL.Path)
+
+		fmt.Println("chegou")
+		if os.IsNotExist(err) {
+			http.ServeFile(w, r, filepath+"/index.html")
+			return
+		}
+
+		fileServer.ServeHTTP(w, r)
+	})
 
 	wrappedMux := corsMiddleware(mux)
 
