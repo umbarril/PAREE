@@ -8,7 +8,7 @@ import type { Arquivo, CoursePlanResponse } from "../types/CoursePlanResponse";
 import type { ProfessorResponse } from "../types/DocenteResponse";
 import type { MissesAndGradesResponse } from "../types/MissesAndGradesResponse";
 import type { StudentResponse } from "../types/DiscenteResponse";
-import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Grid, Card, CardHeader, CardContent, Avatar, Tooltip, Typography, Container, Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, ListItemAvatar, IconButton, Link as MuiLink, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Menu, MenuItem, LinearProgress, useMediaQuery, useTheme, Collapse } from "@mui/material";
 import { BiBookBookmark, BiDetail, BiDotsVerticalRounded, BiExpandVertical, BiMailSend, BiHomeAlt2, BiBookContent, BiGroup, BiGridAlt, BiCalendarEvent, BiAlarm } from "react-icons/bi";
 import { useQuery } from "@tanstack/react-query";
 import type { FrequencyResponse, FrequencyResponseItem } from "../types/FrequencyResponse";
@@ -379,6 +379,7 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
 
     const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+    const [showDisciplineInfo, setShowDisciplineInfo] = useState(false);
 
     const toggleItem = (key: string) => {
       setExpandedItems(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
@@ -477,54 +478,79 @@ function CoursePlanMenu({ id, setLoading }: { id: string; setLoading: (loading: 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
               <Box>
                 <Typography variant="h5">Informações da Disciplina</Typography>
-                <Typography variant="caption" color="text.secondary">Resumo do plano e informações importantes</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Objetivos, conteúdo e critérios gerais do plano
+                </Typography>
               </Box>
+              <Tooltip title={showDisciplineInfo ? 'Recolher informações' : 'Expandir informações'}>
+                <IconButton
+                  size="small"
+                  aria-label={showDisciplineInfo ? 'Recolher informações da disciplina' : 'Expandir informações da disciplina'}
+                  aria-expanded={showDisciplineInfo}
+                  onClick={() => setShowDisciplineInfo((prev) => !prev)}
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                  }}
+                >
+                  <BiExpandVertical />
+                </IconButton>
+              </Tooltip>
             </Box>
 
-            <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2">Objetivos</Typography>
-                {isHtmlEmpty(coursePlan.objetivos)
-                  ? <EmptyPlaceholder />
-                  : <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.objetivos) }} />}
-              </Grid>
+            {!showDisciplineInfo && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Informações detalhadas recolhidas para focar em tópicos e avaliações. Use o ícone ao lado para abrir os detalhes.
+              </Typography>
+            )}
 
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2">Conteúdo</Typography>
-                {isHtmlEmpty(coursePlan.conteudo)
-                  ? <EmptyPlaceholder />
-                  : <Box sx={{ color: 'text.secondary', mt: 0.5, maxHeight: 140, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.conteudo) }} />}
-              </Grid>
+            <Collapse in={showDisciplineInfo} unmountOnExit>
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2">Objetivos</Typography>
+                  {isHtmlEmpty(coursePlan.objetivos)
+                    ? <EmptyPlaceholder />
+                    : <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.objetivos) }} />}
+                </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2">Procedimento de Avaliação</Typography>
-                {isTextEmpty(coursePlan.procedimentoAvaliacaoAprendizagem)
-                  ? <EmptyPlaceholder />
-                  : <Typography variant="body2" color="text.secondary">{String(coursePlan.procedimentoAvaliacaoAprendizagem)}</Typography>}
-              </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2">Conteúdo</Typography>
+                  {isHtmlEmpty(coursePlan.conteudo)
+                    ? <EmptyPlaceholder />
+                    : <Box sx={{ color: 'text.secondary', mt: 0.5, maxHeight: 140, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.conteudo) }} />}
+                </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2">Horário de Atendimento</Typography>
-                {isTextEmpty(coursePlan.horarioAtendimento)
-                  ? <EmptyPlaceholder />
-                  : <Typography variant="body2" color="text.secondary">{coursePlan.horarioAtendimento}</Typography>}
-              </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Typography variant="subtitle2">Procedimento de Avaliação</Typography>
+                  {isTextEmpty(coursePlan.procedimentoAvaliacaoAprendizagem)
+                    ? <EmptyPlaceholder />
+                    : <Typography variant="body2" color="text.secondary">{String(coursePlan.procedimentoAvaliacaoAprendizagem)}</Typography>}
+                </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2">Competências / Habilidades</Typography>
-                {isHtmlEmpty(coursePlan.habilidadesCompetencias)
-                  ? <EmptyPlaceholder />
-                  : <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.habilidadesCompetencias) }} />}
-              </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Typography variant="subtitle2">Horário de Atendimento</Typography>
+                  {isTextEmpty(coursePlan.horarioAtendimento)
+                    ? <EmptyPlaceholder />
+                    : <Typography variant="body2" color="text.secondary">{coursePlan.horarioAtendimento}</Typography>}
+                </Grid>
 
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2">Exame Final / Reposição</Typography>
-                <Typography variant="body2" color="text.secondary">Exame: {isTextEmpty(coursePlan.exameFinal) ? <em>Não informado</em> : coursePlan.exameFinal}</Typography>
-                <Typography variant="body2" color="text.secondary">Hora exame: {isTextEmpty(coursePlan.horaExameFinal) ? <em>Não informado</em> : coursePlan.horaExameFinal}</Typography>
-                <Typography variant="body2" color="text.secondary">Reposição: {isTextEmpty(coursePlan.reposicao) ? <em>Não informado</em> : coursePlan.reposicao}</Typography>
-                <Typography variant="body2" color="text.secondary">Hora reposição: {isTextEmpty(coursePlan.horaReposicao) ? <em>Não informado</em> : coursePlan.horaReposicao}</Typography>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Typography variant="subtitle2">Competências / Habilidades</Typography>
+                  {isHtmlEmpty(coursePlan.habilidadesCompetencias)
+                    ? <EmptyPlaceholder />
+                    : <Box sx={{ color: 'text.secondary', mt: 0.5 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(coursePlan.habilidadesCompetencias) }} />}
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2">Exame Final / Reposição</Typography>
+                  <Typography variant="body2" color="text.secondary">Exame: {isTextEmpty(coursePlan.exameFinal) ? <em>Não informado</em> : coursePlan.exameFinal}</Typography>
+                  <Typography variant="body2" color="text.secondary">Hora exame: {isTextEmpty(coursePlan.horaExameFinal) ? <em>Não informado</em> : coursePlan.horaExameFinal}</Typography>
+                  <Typography variant="body2" color="text.secondary">Reposição: {isTextEmpty(coursePlan.reposicao) ? <em>Não informado</em> : coursePlan.reposicao}</Typography>
+                  <Typography variant="body2" color="text.secondary">Hora reposição: {isTextEmpty(coursePlan.horaReposicao) ? <em>Não informado</em> : coursePlan.horaReposicao}</Typography>
+                </Grid>
               </Grid>
-            </Grid>
+            </Collapse>
           </CardContent>
         </Card>
 
@@ -843,7 +869,7 @@ function OthersMenu({ matricula, id, setLoading }: { matricula: string, id: stri
                   <TableRow>
                     <TableCell>Data</TableCell>
                     <TableCell>Faltas</TableCell>
-                    <TableCell>Horários</TableCell>
+                    <TableCell>Quantidade de Horas</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
